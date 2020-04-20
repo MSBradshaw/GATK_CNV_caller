@@ -162,25 +162,25 @@ rule FILTER_VCF:
 	output: OUTPUT_DIR+"/{sample}.segments_filtered.vcf.gz"
 	script: "Scripts/VCF_CNV_GATK4_denovo_annotate_filter.py" 
 
-rule ANNOT_VCF:
-	input: OUTPUT_DIR+"/{sample}.segments_filtered.vcf.gz"
-	output: OUTPUT_DIR+"/{sample}.segments_filtered_anno.tab"
-	conda: "python_mysql.yml"
-	script: "Scripts/Script_annotation_GATK4_exome_CNV_1.0_standalone.py"
+#rule ANNOT_VCF:
+#	input: OUTPUT_DIR+"/{sample}.segments_filtered.vcf.gz"
+#	output: OUTPUT_DIR+"/{sample}.segments_filtered_anno.tab"
+#	conda: "python_mysql.yml"
+#	script: "Scripts/Script_annotation_GATK4_exome_CNV_1.0_standalone.py"
 
-rule MERGE_CNVS:
-	input: expand(OUTPUT_DIR+"/{sample}.segments_filtered_anno.tab", sample=SAMPLES,)
-	output: OUTPUT_DIR+"/all_cnv_calls_anno.tab"
-	shell: """
-	a=0;
-	for i in {input}; do 
-	a=$((a+1))
-	echo $a
-	if [ $a -eq "1" ];
-	then 
-		cat $i > {output}
-	else
-		tail -n +2 $i >> {output}
-	fi
-	done
-	"""
+#rule MERGE_CNVS:
+#	input: expand(OUTPUT_DIR+"/{sample}.segments_filtered_anno.tab", sample=SAMPLES,)
+#	output: OUTPUT_DIR+"/all_cnv_calls_anno.tab"
+#shell: """
+#a=0;
+#for i in {input}; do 
+#a=$((a+1))
+#echo $a
+#if [ $a -eq "1" ];
+#then 
+#	cat $i > {output}
+#else
+#	tail -n +2 $i >> {output}
+#fi
+#done
+#"""
