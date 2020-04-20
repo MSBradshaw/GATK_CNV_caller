@@ -8,7 +8,7 @@ import glob
 
 #Get PATHS from config file
 workdir: config['SV-EXOME_DIR']
-OUTPUT_DIR = congig['OUTPUT_DIR']
+OUTPUT_DIR = config['OUTPUT_DIR']
 
 # Get paths of required reference files
 REFERENCEGENOME = config["HG_PATH"]
