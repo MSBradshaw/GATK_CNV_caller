@@ -1,92 +1,110 @@
-############################
-#GATK4, GERMLINE CNV CALLING#
-#############################
+############################################################
+#SV-EXOME, a snakefile for calling CNVs in exome with GATK4#
+############################################################
 
 import os
 import json
 import glob
 
-BASEDIR = os.path.abspath("./")
-WORKDIR = os.path.abspath("/d2/Exome_analysis_BC/CNV/GATK4")
-workdir: "/d2/Exome_analysis_BC/CNV/GATK4"
+#Get PATHS from config file
+workdir: config['SV-EXOME_DIR']
+OUTPUT_DIR = congig['OUTPUT_DIR']
 
-JAVA="/opt/jdk1.8.0_111/bin/java"
+# Get paths of required reference files
+REFERENCEGENOME = config["HG_PATH"]
+HGDICT = config["DICT_PATH"]
+BED = config["BED_PATH"]
 
-SAMPLES, = glob_wildcards("/d2/Exome_analysis_BC/CNV/GATK4/CRAM_exome/realigned_recal_{sample}.cram")
-REFERENCEGENOME = "/d2/Exome_analysis_BC/Exome_pipeline_datas/ucsc.hg19_without_hap.fasta"
-CHR = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "X", "Y"]
-BED = "/d2/Exome_analysis_BC/Exome_pipeline_datas/TWIST_REFSEQ/Twist_Exome_plus_RefSeq_Gencode_targets_hg19.bed30bp-fused.fix.bed"
+SAMPLES_DIR = config["SAMPLES_PATH"]
+
+SAMPLES, = glob_wildcards(SAMPLES_DIR+"/{sample}")
+
+SAMPLES_NAME = []
+# Check if samples have a valid extension and make a list of the names of the samples
+for i in glob.glob(OUTPUT_DIR+"/*"):
+    if not (i.endswith(".bam") or i.endswith(".cram")):
+        print(i+" has not a valid extension. It should be a .bam or .cram file") 
+        exit()
+    else:
+        SAMPLES_NAME.append(i.split("/")[-1].replace(".cram","").replace(".bam","").split(config["SAMPLE_SEPARATOR"])[int(config["SAMPLE_INDEX"])])
+
 CHROMOSOME = ["chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10", "chr11", "chr12", "chr13", "chr14", "chr15", "chr16", "chr17", "chr18", "chr19", "chr20", "chr21", "chr22", "chrX", "chrY"]
 
-BGZIP="/opt/bgzip"
-def range_s(i):
-    return range(0,i)
 
-NUM_SAMPLES = range(30)
+
 ### RULES ### 
 
 rule target:
-    input: expand("results_exome/count.{sample}.tsv", sample=SAMPLES,), "results_exome/whole_exome_annotated_intervals.tsv", "results_exome/whole_exome_cohort_gccontent.filtered.interval_list", "results_exome/ploidy-calls_chr", "results_exome/cohort_germline_calling", expand("results_exome/{sample}.segments.vcf.gz", sample=SAMPLES,), "results_exome/database_sorted.tab", expand("results_exome/{sample}.segments_filtered.vcf.gz", sample=SAMPLES,), expand("results_exome/{sample}.segments_filtered_anno.tab", sample=SAMPLES,),"results_exome/all_cnv_calls_anno.tab"
+    input: expand(OUTPUT_DIR+"/count.{sample}.tsv", sample=SAMPLES,), OUTPUT_DIR+"/ploidy-calls_chr", OUTPUT_DIR+"/cohort_germline_calling", expand(OUTPUT_DIR"/{sample}.segments.vcf.gz", sample=SAMPLES_NAME,), OUTPUT_DIR+"/database_sorted.tab", expand(OUTPUT_DIR+"/{sample}.segments_filtered.vcf.gz", sample=SAMPLES_NAME,), expand(OUTPUT_DIR+"/{sample}.segments_filtered_anno.tab", sample=SAMPLES_NAME,),OUTPUT_DIR+"/all_cnv_calls_anno.tab"
 
 rule MAKE_INTERVALS:
     input: ref = REFERENCEGENOME, bed = BED 
-    output: "results_exome/interval_whole_exome.interval_list"
+    output: OUTPUT_DIR+"/interval_whole_exome.interval_list"
+    conda : "envs/gatkcondaenv.yml"
     shell:
         """
-        /opt/jdk1.8.0_111/bin/java -jar /d2/Exome_analysis_BC/CNV/GATK4/gatk-4.1.4.1/gatk-package-4.1.4.1-local.jar PreprocessIntervals \
+        gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" PreprocessIntervals \
         -R {input.ref} \
-	-L {input.bed} \
+	    -L {input.bed} \
         --interval-merging-rule OVERLAPPING_ONLY \
         -O {output}
         """
 
+def get_name(sample):
+    return sample.replace(".cram","").replace(".bam","").split(config["SAMPLE_SEPARATOR"])[int(config["SAMPLE_INDEX"])]
 
 rule COLLECT_READCOUNT:
-    input: ref = REFERENCEGENOME, interval = "results_exome/interval_whole_exome.interval_list", bam = "/d2/Exome_analysis_BC/CNV/GATK4/CRAM_exome/realigned_recal_{sample}.cram"
-    output: "results_exome/count.{sample}.tsv"
+    input: ref = REFERENCEGENOME, interval = OUTPUT_DIR+"/interval_whole_exome.interval_list", bam = SAMPLES_DIR+"/{sample}"
+    params: name = lambda wildcards: get_name(wildcards.sample)
+    output: samp = OUTPUT_DIR+"/count.{sample}.tsv", name_samp = OUTPUT_DIR+"/count.{params.name}.tsv"
+    conda : "envs/gatkcondaenv.yml"
     shell: """
-	/opt/jdk1.8.0_111/bin/java -jar /d2/Exome_analysis_BC/CNV/GATK4/gatk-4.1.4.1/gatk-package-4.1.4.1-local.jar CollectReadCounts --disable-read-filter WellformedReadFilter -R {input.ref} -I {input.bam} -L {input.interval} -imr OVERLAPPING_ONLY --format TSV -O {output}
+	gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" CollectReadCounts --disable-read-filter WellformedReadFilter -R {input.ref} -I {input.bam} -L {input.interval} -imr OVERLAPPING_ONLY --format TSV -O {output}
+	cp {output.samp} {params.name}
 	"""
 
 rule ANNOTATE_INTERVALS:
-    input: interval = "results_exome/interval_whole_exome.interval_list", ref = REFERENCEGENOME
-    output: "results_exome/whole_exome_annotated_intervals.tsv"
-    shell:"""/opt/jdk1.8.0_111/bin/java -jar /d2/Exome_analysis_BC/CNV/GATK4/gatk-4.1.4.1/gatk-package-4.1.4.1-local.jar AnnotateIntervals -L {input.interval} -R {input.ref} -imr OVERLAPPING_ONLY -O {output}"""
+    input: interval = OUTPUT_DIR+"interval_whole_exome.interval_list", ref = REFERENCEGENOME
+    output: OUTPUT_DIR+"/whole_exome_annotated_intervals.tsv"
+    conda : "envs/gatkcondaenv.yml"
+    shell:"""
+    gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" AnnotateIntervals -L {input.interval} -R {input.ref} -imr OVERLAPPING_ONLY -O {output}
+    """
 
 
 rule FILTER_INTERVALS:
-    input: interval = "results_exome/interval_whole_exome.interval_list", count = expand("results_exome/count.{sample}.tsv", sample=SAMPLES,), annotated = "results_exome/whole_exome_annotated_intervals.tsv"
-    output: "results_exome/whole_exome_cohort_gccontent.filtered.interval_list"
+    input: interval = OUTPUT_DIR+"/interval_whole_exome.interval_list", count = expand(OUTPUT_DIR+"/count.{sample}.tsv", sample=SAMPLES_NAME,), annotated = OUTPUT_DIR+"/whole_exome_annotated_intervals.tsv"
+    output: OUTPUT_DIR+"/whole_exome_cohort_gccontent.filtered.interval_list"
+    conda : "envs/gatkcondaenv.yml"
     shell:"""
 	a=""
 	for i in {input.count}; do a=$a" -I "$i; done
-	/opt/jdk1.8.0_111/bin/java -jar /d2/Exome_analysis_BC/CNV/GATK4/gatk-4.1.4.1/gatk-package-4.1.4.1-local.jar FilterIntervals -L {input.interval} --annotated-intervals {input.annotated} $a -imr OVERLAPPING_ONLY -O {output} 
+	gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" FilterIntervals -L {input.interval} --annotated-intervals {input.annotated} $a -imr OVERLAPPING_ONLY -O {output} 
 	"""
 
 rule PLOIDY:
-    input: cohort = "results_exome/whole_exome_cohort_gccontent.filtered.interval_list", priors = "contig_ploidy_priors.tsv", tsv = expand("results_exome/count.{sample}.tsv", sample=SAMPLES,)
-    output: directory("results_exome/ploidy-calls_chr")
+    input: cohort = OUTPUT_DIR+"/whole_exome_cohort_gccontent.filtered.interval_list", priors = "conf/contig_ploidy_priors.tsv", tsv = expand(OUTPUT_DIR+"/count.{sample}.tsv", sample=SAMPLES_NAME,)
+    output: directory(OUTPUT_DIR+"/ploidy-calls_chr")
     params: prefix = "ploidy"
-    conda: "gatk-4.1.4.1/gatkcondaenv.yml"
+    conda: "envs/gatkcondaenv.yml"
     shell: """
-	export MKL_NUM_THREADS=12
-	export OMP_NUM_THREADS=12
+	export MKL_NUM_THREADS={config[GATK][MAX_THREADS]}
+	export OMP_NUM_THREADS={config[GATK][MAX_THREADS]}
 	a=""
 	for i in {input.tsv}; do a=$a" -I "$i; done
-	echo $a
-	/opt/jdk1.8.0_111/bin/java -jar /d2/Exome_analysis_BC/CNV/GATK4/gatk-4.1.4.1/gatk-package-4.1.4.1-local.jar DetermineGermlineContigPloidy -L {input.cohort} $a --imr OVERLAPPING_ONLY --contig-ploidy-priors {input.priors} --output {output} --output-prefix {params}
+	gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" DetermineGermlineContigPloidy -L {input.cohort} $a --imr OVERLAPPING_ONLY --contig-ploidy-priors {input.priors} --output {output} --output-prefix {params}
 	"""
 
 rule GERMLINE_CNV_CALLER:
-    input: interval = "results_exome/whole_exome_cohort_gccontent.filtered.interval_list", tsv = expand("results_exome/count.{sample}.tsv", sample=SAMPLES,), priors = "contig_ploidy_priors.tsv", anno = "results_exome/whole_exome_annotated_intervals.tsv", ploidy="results_exome/ploidy-calls_chr"
-    output: directory("results_exome/cohort_germline_calling")
-    conda: "gatk-4.1.4.1/gatkcondaenv.yml"
+    input: interval = OUTPUT_DIR+"/whole_exome_cohort_gccontent.filtered.interval_list", tsv = expand(OUTPUT_DIR+"/count.{sample}.tsv", sample=SAMPLES_NAME,), priors = "conf/contig_ploidy_priors.tsv", anno = OUTPUT_DIR+"/whole_exome_annotated_intervals.tsv", ploidy=OUTPUT_DIR+"/ploidy-calls_chr"
+    output: directory(OUTPUT_DIR+"/cohort_germline_calling")
+    conda: "envs/gatkcondaenv.yml"
     shell: """
-	export MKL_NUM_THREADS=12
-        export OMP_NUM_THREADS=12
+	export MKL_NUM_THREADS={config[GATK][MAX_THREADS]}
+    export OMP_NUM_THREADS={config[GATK][MAX_THREADS]}
 	a=""
 	for i in {input.tsv}; do a=$a" -I "$i; done
-	/opt/jdk1.8.0_111/bin/java -jar /d2/Exome_analysis_BC/CNV/GATK4/gatk-4.1.4.1/gatk-package-4.1.4.1-local.jar GermlineCNVCaller \
+	gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" GermlineCNVCaller \
 	-L {input.interval} \
 	--run-mode COHORT \
 	$a \
@@ -99,60 +117,59 @@ rule GERMLINE_CNV_CALLER:
 	"""
 
 def index(sample):
-    for i in glob.glob("results_exome/cohort_germline_calling/whole_exome-calls/SAMPLE_*/sample_name.txt"):
+    for i in glob.glob(OUTPUT_DIR+"/cohort_germline_calling/whole_exome-calls/SAMPLE_*/sample_name.txt"):
         file=open(i,'r')
         for line in file:
            if line.rstrip() == sample: 
                return i.split('/')[-2].split('_')[1]
 
 rule POSTPROCESS:
-	input: germline = rules.GERMLINE_CNV_CALLER.output, sam = "results_exome/count.{sample}.tsv"
-	output:	int = "results_exome/{sample}.intervals.vcf.gz", seg = "results_exome/{sample}.segments.vcf.gz", den = "results_exome/{sample}.denoise"
-	params:	id = lambda wildcards: index(wildcards.sample)
-	conda: "gatk-4.1.4.1/gatkcondaenv.yml"
+	input: germline = rules.GERMLINE_CNV_CALLER.output, sam = OUTPUT_DIR+"/count.{sample}.tsv", lambda wildcards: config["samples"][wildcards.sample]
+	output:	int = OUTPUT_DIR+"/{sample}.intervals.vcf.gz", seg = OUTPUT_DIR+"/{sample}.segments.vcf.gz", den = OUTPUT_DIR+"/{sample}.denoise"
+	params:	id = lambda wildcards: index(wildcards.sample), model_path = OUTPUT_DIR+"/cohort_germline_calling/whole_exome-model/", call_path = OUTPUT_DIR+"/ploidy-calls_chr/ploidy-calls/", ploidy_path = OUTPUT_DIR+"/ploidy-calls_chr/ploidy-calls/", dict = HGDICT
+	conda: "envs/gatkcondaenv.yml"
 	shell: """
 	export MKL_NUM_THREADS=1
 	export OMP_NUM_THREADS=1
-	/opt/jdk1.8.0_111/bin/java -jar /d2/Exome_analysis_BC/CNV/GATK4/gatk-4.1.4.1/gatk-package-4.1.4.1-local.jar \
-	PostprocessGermlineCNVCalls \
-	--model-shard-path ./results_exome/cohort_germline_calling/whole_exome-model/ \
-	--calls-shard-path ./results_exome/cohort_germline_calling/whole_exome-calls/ \
+	gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" PostprocessGermlineCNVCalls \
+	--model-shard-path {params.model_path} \
+	--calls-shard-path {params.call_path} \
 	--allosomal-contig chrX --allosomal-contig chrY \
-	--contig-ploidy-calls ./results_exome/ploidy-calls_chr/ploidy-calls/ \
+	--contig-ploidy-calls {params.ploidy_path} \
 	--sample-index {params.id} \
 	--output-genotyped-intervals {output.int} \
 	--output-genotyped-segments {output.seg} \
 	--output-denoised-copy-ratios {output.den} \
-	--sequence-dictionary /d2/Exome_analysis_BC/Exome_pipeline_datas/ucsc.hg19_without_hap.dict 
+	--sequence-dictionary {params.dict} 
 	"""
 	
 rule DATABASE:
-	input: expand("results_exome/{sample}.segments.vcf.gz", sample=SAMPLES,)
-	output: "results_exome/database.tab"
+	input: expand(OUTPUT_DIR+"/{sample}.segments.vcf.gz", sample=SAMPLES_DIR,)
+	output: OUTPUT_DIR+"/database.tab"
 	script: "Scripts/gatk4_cnv_database_file_snakemake.py"
 		
 rule BED_SORT:
-	input: "results_exome/database.tab" 
-	output: "results_exome/database_sorted.tab"
+	input: OUTPUT_DIR+"/database.tab" 
+	output: OUTPUT_DIR+"/database_sorted.tab"
 	shell: """
 	echo -e "#CHR\tSTART\tSTOP\tCNV\tNUMBER\tSAMPLES" > {output}
 	sort -V -k1,1 -k 2,2 {input} >> {output}
 	"""
 
 rule FILTER_VCF:
-	input: database=rules.BED_SORT.output, samples="results_exome/{sample}.segments.vcf.gz"
-	output: "results_exome/{sample}.segments_filtered.vcf.gz"
+	input: database=rules.BED_SORT.output, samples=OUTPUT_DIR+"{sample}.segments.vcf.gz"
+	output: OUTPUT_DIR+"/{sample}.segments_filtered.vcf.gz"
 	script: "Scripts/VCF_CNV_GATK4_denovo_annotate_filter.py" 
 
 rule ANNOT_VCF:
-	input: "results_exome/{sample}.segments_filtered.vcf.gz"
-	output: "results_exome/{sample}.segments_filtered_anno.tab"
+	input: OUTPUT_DIR+"/{sample}.segments_filtered.vcf.gz"
+	output: OUTPUT_DIR+"/{sample}.segments_filtered_anno.tab"
 	conda: "python_mysql.yml"
 	script: "Scripts/Script_annotation_GATK4_exome_CNV_1.0_standalone.py"
 
 rule MERGE_CNVS:
-	input: expand("results_exome/{sample}.segments_filtered_anno.tab", sample=SAMPLES,)
-	output: "results_exome/all_cnv_calls_anno.tab"
+	input: expand(OUTPUT_DIR+"/{sample}.segments_filtered_anno.tab", sample=SAMPLE_DIRS,)
+	output: OUTPUT_DIR+"/all_cnv_calls_anno.tab"
 	shell: """
 	a=0;
 	for i in {input}; do 
