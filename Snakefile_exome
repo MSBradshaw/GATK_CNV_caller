@@ -158,7 +158,7 @@ rule BED_SORT:
 	"""
 
 rule FILTER_VCF:
-	input: database=rules.BED_SORT.output, samples=OUTPUT_DIR+"{sample}.segments.vcf.gz"
+	input: database=rules.BED_SORT.output, samples=OUTPUT_DIR+"/{sample}.segments.vcf.gz"
 	output: OUTPUT_DIR+"/{sample}.segments_filtered.vcf.gz"
 	script: "Scripts/VCF_CNV_GATK4_denovo_annotate_filter.py" 
 
