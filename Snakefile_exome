@@ -59,7 +59,7 @@ rule COLLECT_READCOUNT:
     output: samp = OUTPUT_DIR+"/count.{sample}.tsv", name_samp = OUTPUT_DIR+"/count.{params.name}.tsv"
     conda : "envs/gatkcondaenv.yml"
     shell: """
-	gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" CollectReadCounts --disable-read-filter WellformedReadFilter -R {input.ref} -I {input.bam} -L {input.interval} -imr OVERLAPPING_ONLY --format TSV -O {output}
+	gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" CollectReadCounts --disable-read-filter WellformedReadFilter -R {input.ref} -I {input.bam} -L {input.interval} -imr OVERLAPPING_ONLY --format TSV -O {output.samp}
 	cp {output.samp} {params.name}
 	"""
 
