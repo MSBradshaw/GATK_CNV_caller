@@ -1,15 +1,24 @@
-# PATHS
+# PATHS TO DIRECTORIES
 SV-EXOME_DIR: /ceph-recherche/users/bcogne/SV-exome
 OUTPUT_DIR: /ceph-recherche/users/bcogne/SV-exome/test
 TEMP_DIR: /ceph-recherche/users/bcogne/SV-exome/tmp
 
-# Reference genome
+# Paths to reference files
 HG_PATH: /sandbox/users/bcogne/externalshares/Bioinfo/ucsc.hg19_without_hap.fasta
+DICT_PATH: /sandbox/users/bcogne/externalshares/Bioinfo/ucsc.hg19_without_hap.dict
 BED_PATH: /sandbox/users/bcogne/externalshares/Bioinfo/Twist_Exome_plus_RefSeq_Gencode_targets_hg19.bed30bp-fused.fix.bed
 
+# Directory with BAM or CRAM files
+SAMPLES_PATH: /sandbox/users/bcogne/externalshares/Bioinfo/CRAM
+
+# Parameters to retrieve sample name from bam or cram files:
+SAMPLE_SEPARATOR: _
+SAMPLE_INDEX: 2
 
 # JAVA ARGUMENTS FOR GATK
 JAVA_ARGS:
     MAX_MEMORY: 8G                      # Maximum memory allocation pool for a Java virtual machine.
     PARALLEL_GC_THREADS: 4    # Number of garbage collector threads.
 
+GATK:
+    MAX_THREADS: 12
