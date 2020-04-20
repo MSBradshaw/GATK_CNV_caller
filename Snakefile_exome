@@ -51,17 +51,16 @@ rule MAKE_INTERVALS:
         -O {output}
         """
 
-def get_name(sample):
-    return sample.replace(".cram","").replace(".bam","").split(config["SAMPLE_SEPARATOR"])[int(config["SAMPLE_INDEX"])]
+#def get_name(sample):
+    #return sample.replace(".cram","").replace(".bam","").split(config["SAMPLE_SEPARATOR"])[int(config["SAMPLE_INDEX"])]
 
 rule COLLECT_READCOUNT:
-    input: ref = REFERENCEGENOME, interval = OUTPUT_DIR+"/interval_whole_exome.interval_list", bam = SAMPLES_DIR+"/{sample}"
-    params: name = lambda wildcards: get_name(wildcards.sample)
-    output: samp = OUTPUT_DIR+"/count.{sample}.tsv", name_samp = OUTPUT_DIR+"/count.{params.name}.tsv"
+    input: ref = REFERENCEGENOME, interval = OUTPUT_DIR+"/interval_whole_exome.interval_list", bam = SAMPLES_DIR+"/"+SAMPLE_WC
+    #params: name = lambda wildcards: get_name(wildcards.sample)
+    output: samp = OUTPUT_DIR+"/count.{sample}.tsv" # name_samp = OUTPUT_DIR+"/count.{params.name}.tsv"
     conda : "envs/gatkcondaenv.yml"
     shell: """
 	gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" CollectReadCounts --disable-read-filter WellformedReadFilter -R {input.ref} -I {input.bam} -L {input.interval} -imr OVERLAPPING_ONLY --format TSV -O {output.samp}
-	cp {output.samp} {output.name_samp}
 	"""
 
 rule ANNOTATE_INTERVALS:
