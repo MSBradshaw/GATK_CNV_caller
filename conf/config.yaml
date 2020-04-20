@@ -1,0 +1,15 @@
+# PATHS
+SV-EXOME_DIR: /ceph-recherche/users/bcogne/SV-exome
+OUTPUT_DIR: /ceph-recherche/users/bcogne/SV-exome/test
+TEMP_DIR: /ceph-recherche/users/bcogne/SV-exome/tmp
+
+# Reference genome
+HG_PATH: /sandbox/users/bcogne/externalshares/Bioinfo/ucsc.hg19_without_hap.fasta
+BED_PATH: /sandbox/users/bcogne/externalshares/Bioinfo/Twist_Exome_plus_RefSeq_Gencode_targets_hg19.bed30bp-fused.fix.bed
+
+
+# JAVA ARGUMENTS FOR GATK
+JAVA_ARGS:
+    MAX_MEMORY: 8G                      # Maximum memory allocation pool for a Java virtual machine.
+    PARALLEL_GC_THREADS: 4    # Number of garbage collector threads.
+
