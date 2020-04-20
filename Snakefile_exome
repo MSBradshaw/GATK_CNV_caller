@@ -18,7 +18,7 @@ BED = config["BED_PATH"]
 SAMPLES_DIR = config["SAMPLES_PATH"]
 SAMPLE_WC = config["SAMPLE_WILDCARD"]
 print(SAMPLE_WC)
-SAMPLES, = glob_wildcards(SAMPLES_DIR+"/"+SAMPLES_WC)
+SAMPLES, = glob_wildcards(SAMPLES_DIR+"/"+SAMPLE_WC)
 print(SAMPLES)
 
 SAMPLES_NAME = []
