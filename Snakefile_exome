@@ -18,7 +18,8 @@ BED = config["BED_PATH"]
 SAMPLES_DIR = config["SAMPLES_PATH"]
 SAMPLE_WC = config["SAMPLE_WILDCARD"]
 print(SAMPLE_WC)
-SAMPLES, = glob_wildcards(SAMPLES_DIR+"/{sample}")
+SAMPLES, = glob_wildcards(SAMPLES_DIR+"/"+SAMPLES_WC)
+print(SAMPLES)
 
 SAMPLES_NAME = []
 # Check if samples have a valid extension and make a list of the names of the samples
@@ -36,7 +37,7 @@ CHROMOSOME = ["chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "c
 ### RULES ### 
 
 rule target:
-    input: expand(OUTPUT_DIR+"/count.{sample}.tsv", sample=SAMPLES,), OUTPUT_DIR+"/ploidy-calls_chr", OUTPUT_DIR+"/cohort_germline_calling", expand(OUTPUT_DIR+"/{sample}.segments.vcf.gz", sample=SAMPLES_NAME,), OUTPUT_DIR+"/database_sorted.tab", expand(OUTPUT_DIR+"/{sample}.segments_filtered.vcf.gz", sample=SAMPLES_NAME,), expand(OUTPUT_DIR+"/{sample}.segments_filtered_anno.tab", sample=SAMPLES_NAME,),OUTPUT_DIR+"/all_cnv_calls_anno.tab"
+    input: expand(OUTPUT_DIR+"/count.{sample}.tsv", sample=SAMPLES,), OUTPUT_DIR+"/ploidy-calls_chr", OUTPUT_DIR+"/cohort_germline_calling", expand(OUTPUT_DIR+"/{sample}.segments.vcf.gz", sample=SAMPLES,), OUTPUT_DIR+"/database_sorted.tab", expand(OUTPUT_DIR+"/{sample}.segments_filtered.vcf.gz", sample=SAMPLES,), expand(OUTPUT_DIR+"/{sample}.segments_filtered_anno.tab", sample=SAMPLES,),OUTPUT_DIR+"/all_cnv_calls_anno.tab"
 
 rule MAKE_INTERVALS:
     input: ref = REFERENCEGENOME, bed = BED 
@@ -57,7 +58,7 @@ rule MAKE_INTERVALS:
 rule COLLECT_READCOUNT:
     input: ref = REFERENCEGENOME, interval = OUTPUT_DIR+"/interval_whole_exome.interval_list", bam = SAMPLES_DIR+"/"+SAMPLE_WC
     #params: name = lambda wildcards: get_name(wildcards.sample)
-    output: samp = OUTPUT_DIR+"/count.{sample}.tsv" # name_samp = OUTPUT_DIR+"/count.{params.name}.tsv"
+    output: samp = OUTPUT_DIR+"/count.{sample}.tsv"
     conda : "envs/gatkcondaenv.yml"
     shell: """
 	gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" CollectReadCounts --disable-read-filter WellformedReadFilter -R {input.ref} -I {input.bam} -L {input.interval} -imr OVERLAPPING_ONLY --format TSV -O {output.samp}
@@ -73,7 +74,7 @@ rule ANNOTATE_INTERVALS:
 
 
 rule FILTER_INTERVALS:
-    input: interval = OUTPUT_DIR+"/interval_whole_exome.interval_list", count = expand(OUTPUT_DIR+"/count.{sample}.tsv", sample=SAMPLES_NAME,), annotated = OUTPUT_DIR+"/whole_exome_annotated_intervals.tsv"
+    input: interval = OUTPUT_DIR+"/interval_whole_exome.interval_list", count = expand(OUTPUT_DIR+"/count.{sample}.tsv", sample=SAMPLES,), annotated = OUTPUT_DIR+"/whole_exome_annotated_intervals.tsv"
     output: OUTPUT_DIR+"/whole_exome_cohort_gccontent.filtered.interval_list"
     conda : "envs/gatkcondaenv.yml"
     shell:"""
@@ -83,7 +84,7 @@ rule FILTER_INTERVALS:
 	"""
 
 rule PLOIDY:
-    input: cohort = OUTPUT_DIR+"/whole_exome_cohort_gccontent.filtered.interval_list", priors = "conf/contig_ploidy_priors.tsv", tsv = expand(OUTPUT_DIR+"/count.{sample}.tsv", sample=SAMPLES_NAME,)
+    input: cohort = OUTPUT_DIR+"/whole_exome_cohort_gccontent.filtered.interval_list", priors = "conf/contig_ploidy_priors.tsv", tsv = expand(OUTPUT_DIR+"/count.{sample}.tsv", sample=SAMPLES,)
     output: directory(OUTPUT_DIR+"/ploidy-calls_chr")
     params: prefix = "ploidy"
     conda: "envs/gatkcondaenv.yml"
@@ -96,7 +97,7 @@ rule PLOIDY:
 	"""
 
 rule GERMLINE_CNV_CALLER:
-    input: interval = OUTPUT_DIR+"/whole_exome_cohort_gccontent.filtered.interval_list", tsv = expand(OUTPUT_DIR+"/count.{sample}.tsv", sample=SAMPLES_NAME,), priors = "conf/contig_ploidy_priors.tsv", anno = OUTPUT_DIR+"/whole_exome_annotated_intervals.tsv", ploidy=OUTPUT_DIR+"/ploidy-calls_chr"
+    input: interval = OUTPUT_DIR+"/whole_exome_cohort_gccontent.filtered.interval_list", tsv = expand(OUTPUT_DIR+"/count.{sample}.tsv", sample=SAMPLES,), priors = "conf/contig_ploidy_priors.tsv", anno = OUTPUT_DIR+"/whole_exome_annotated_intervals.tsv", ploidy=OUTPUT_DIR+"/ploidy-calls_chr"
     output: directory(OUTPUT_DIR+"/cohort_germline_calling")
     conda: "envs/gatkcondaenv.yml"
     shell: """
@@ -144,7 +145,7 @@ rule POSTPROCESS:
 	"""
 	
 rule DATABASE:
-	input: expand(OUTPUT_DIR+"/{sample}.segments.vcf.gz", sample=SAMPLES_DIR,)
+	input: expand(OUTPUT_DIR+"/{sample}.segments.vcf.gz", sample=SAMPLES,)
 	output: OUTPUT_DIR+"/database.tab"
 	script: "Scripts/gatk4_cnv_database_file_snakemake.py"
 		
@@ -168,7 +169,7 @@ rule ANNOT_VCF:
 	script: "Scripts/Script_annotation_GATK4_exome_CNV_1.0_standalone.py"
 
 rule MERGE_CNVS:
-	input: expand(OUTPUT_DIR+"/{sample}.segments_filtered_anno.tab", sample=SAMPLES_DIR,)
+	input: expand(OUTPUT_DIR+"/{sample}.segments_filtered_anno.tab", sample=SAMPLES,)
 	output: OUTPUT_DIR+"/all_cnv_calls_anno.tab"
 	shell: """
 	a=0;
