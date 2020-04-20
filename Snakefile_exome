@@ -65,7 +65,7 @@ rule COLLECT_READCOUNT:
 	"""
 
 rule ANNOTATE_INTERVALS:
-    input: interval = OUTPUT_DIR+"interval_whole_exome.interval_list", ref = REFERENCEGENOME
+    input: interval = OUTPUT_DIR+"/interval_whole_exome.interval_list", ref = REFERENCEGENOME
     output: OUTPUT_DIR+"/whole_exome_annotated_intervals.tsv"
     conda : "envs/gatkcondaenv.yml"
     shell:"""
