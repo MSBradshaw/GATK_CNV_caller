@@ -19,7 +19,7 @@ SAMPLES_DIR = config["SAMPLES_PATH"]
 SAMPLE_WC = config["SAMPLE_WILDCARD"]
 SAMPLES, = glob_wildcards(SAMPLES_DIR+"/"+SAMPLE_WC)
 
-SAMPLES_GLOB = glob.glob(OUTPUT_DIR+"/*am")
+SAMPLES_GLOB = glob.glob(SAMPLES_DIR+"/*am")
 
 SAMPLES_NAME = []
 # Check if samples have a valid extension and make a list of the names of the samples
