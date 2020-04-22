@@ -110,8 +110,8 @@ for line in IN:
             OMIM_disease="."
         refseq_file.close()    
    
-            ### Writing to OUT file ###
-            OUT.write(name+"\t"+SVTYPE+"\t"+cnv_key+"\t"+str(cnv_size)+"\t"+';'.join(genes)+'\t'+';'.join(OMIM_disease)+'\t'+internal_db+'\t'+CN+'\t'+NP+'\t'+QA+'\t'+QS+'\t'+QSE+'\t'+QSS+"\n")
+        ### Writing to OUT file ###
+        OUT.write(name+"\t"+SVTYPE+"\t"+cnv_key+"\t"+str(cnv_size)+"\t"+';'.join(genes)+'\t'+';'.join(OMIM_disease)+'\t'+internal_db+'\t'+CN+'\t'+NP+'\t'+QA+'\t'+QS+'\t'+QSE+'\t'+QSS+"\n")
          
     
 OUT.close() 
