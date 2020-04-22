@@ -56,8 +56,8 @@ for line in IN:
         cnv_size=cnv_end-cnv_start
         cnv_key=chr_cnv+":"+str(cnv_start)+"-"+str(cnv_end)
         ## Keep only cnvs found in less than 3 individuals
-        if int(internal_db) > 3:
-            continue
+        #if int(internal_db) > 3:
+        #    continue
         
         format=field[8].split(":")
         for i in format:
