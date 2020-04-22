@@ -17,6 +17,8 @@ SAMPLES_PATH: /sandbox/users/bcogne/externalshares/Bioinfo/CRAM
 SAMPLE_SEPARATOR: _
 SAMPLE_INDEX: 2
 
+# NUMBER OF CPU FOR GERMLINE CNV CALLER
+GERMLINE_CNV_CALLER_CPU=5
 # JAVA ARGUMENTS FOR GATK
 JAVA_ARGS:
     MAX_MEMORY: 8G                      # Maximum memory allocation pool for a Java virtual machine.
@@ -24,3 +26,5 @@ JAVA_ARGS:
 
 GATK:
     MAX_THREADS: 12
+
+
