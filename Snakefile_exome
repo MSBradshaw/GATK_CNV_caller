@@ -60,14 +60,14 @@ def get_name(wildcards):
             return { "ALIGN" : i }
     
 rule COLLECT_READCOUNT:
-    input: unpack(get_name)
-    params: ref = REFERENCEGENOME, interval = OUTPUT_DIR+"/interval_whole_exome.interval_list"
+    input: unpack(get_name), interval = OUTPUT_DIR+"/interval_whole_exome.interval_list"
+    params: ref = REFERENCEGENOME
     output: samp = OUTPUT_DIR+"/count.{sample}.tsv"
     conda : "envs/gatkcondaenv.yml"
     shell: """
 	export MKL_NUM_THREADS=1
 	export OMP_NUM_THREADS=1
-	gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" CollectReadCounts --disable-read-filter WellformedReadFilter -R {params.ref} -I {input.ALIGN} -L {params.interval} -imr OVERLAPPING_ONLY --format TSV -O {output}
+	gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" CollectReadCounts --disable-read-filter WellformedReadFilter -R {params.ref} -I {input.ALIGN} -L {input.interval} -imr OVERLAPPING_ONLY --format TSV -O {output}
 	"""
 
 rule ANNOTATE_INTERVALS:
