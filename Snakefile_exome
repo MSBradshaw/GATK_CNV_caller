@@ -129,7 +129,7 @@ def index(sample):
 rule POSTPROCESS:
 	input: germline = rules.GERMLINE_CNV_CALLER.output, sam = OUTPUT_DIR+"/count.{sample}.tsv"
 	output:	int = OUTPUT_DIR+"/{sample}.intervals.vcf.gz", seg = OUTPUT_DIR+"/{sample}.segments.vcf.gz", den = OUTPUT_DIR+"/{sample}.denoise"
-	params:	id = lambda wildcards: index(wildcards.sample), model_path = OUTPUT_DIR+"/cohort_germline_calling/whole_exome-model/", call_path = OUTPUT_DIR+"/ploidy-calls_chr/ploidy-calls/", ploidy_path = OUTPUT_DIR+"/ploidy-calls_chr/ploidy-calls/", dict = HGDICT
+	params:	id = lambda wildcards: index(wildcards.sample), model_path = OUTPUT_DIR+"/cohort_germline_calling/whole_exome-model/", call_path = OUTPUT_DIR+"/cohort_germline_calling/whole_exome-model/", ploidy_path = OUTPUT_DIR+"/ploidy-calls_chr/ploidy-calls/", dict = HGDICT
 	conda: "envs/gatkcondaenv.yml"
 	shell: """
 	export MKL_NUM_THREADS=1
