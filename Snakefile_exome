@@ -30,6 +30,8 @@ for i in SAMPLES_GLOB:
     else:
         SAMPLES_NAME.append(i.split("/")[-1].replace(".cram","").replace(".bam","").split(config["SAMPLE_SEPARATOR"])[int(config["SAMPLE_INDEX"])])
 
+SCATTER = ["temp_0001_of_4","temp_0002_of_4","temp_0003_of_4","temp_0004_of_4"]
+
 CHROMOSOME = ["chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10", "chr11", "chr12", "chr13", "chr14", "chr15", "chr16", "chr17", "chr18", "chr19", "chr20", "chr21", "chr22", "chrX", "chrY"]
 
 
@@ -37,7 +39,7 @@ CHROMOSOME = ["chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "c
 ### RULES ### 
 
 rule target:
-    input: expand(OUTPUT_DIR+"/count.{sample}.tsv", sample=SAMPLES_NAME,), OUTPUT_DIR+"/ploidy-calls_chr", OUTPUT_DIR+"/cohort_germline_calling", expand(OUTPUT_DIR+"/{sample}.segments.vcf.gz", sample=SAMPLES_NAME,), OUTPUT_DIR+"/database_sorted.tab", expand(OUTPUT_DIR+"/{sample}.segments_filtered.vcf.gz", sample=SAMPLES_NAME,), expand(OUTPUT_DIR+"/{sample}.segments_filtered.vcf.gz", sample=SAMPLES_NAME,)
+    input: expand(OUTPUT_DIR+"/count.{sample}.tsv", sample=SAMPLES_NAME,), expand(OUTPUT_DIR+"/scatter/{scatter}/scattered.interval_list", scatter = SCATTER,), OUTPUT_DIR+"/ploidy-calls_chr", OUTPUT_DIR+"/cohort_germline_calling", expand(OUTPUT_DIR+"/{sample}.segments.vcf.gz", sample=SAMPLES_NAME,), OUTPUT_DIR+"/database_sorted.tab", expand(OUTPUT_DIR+"/{sample}.segments_filtered.vcf.gz", sample=SAMPLES_NAME,), expand(OUTPUT_DIR+"/{sample}.segments_filtered.vcf.gz", sample=SAMPLES_NAME,)
 
 rule MAKE_INTERVALS:
     input: ref = REFERENCEGENOME, bed = BED 
@@ -98,26 +100,36 @@ rule PLOIDY:
 	gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" DetermineGermlineContigPloidy -L {input.cohort} $a --imr OVERLAPPING_ONLY --contig-ploidy-priors {input.priors} --output {output} --output-prefix {params}
 	"""
 
+rule SCATTER:
+        input: OUTPUT_DIR+"/whole_exome_cohort_gccontent.filtered.interval_list"
+        params: dir = directory(OUTPUT_DIR+"/scatter")
+        output: expand(OUTPUT_DIR+"/scatter/{scatter}/scattered.interval_list", scatter=SCATTER,)
+        shell: """
+        gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}"  IntervalListTools --SUBDIVISION_MODE BALANCING_WITHOUT_INTERVAL_SUBDIVISION --SCATTER_COUNT 4 --INPUT {input} --OUTPUT {params.dir}
+        """
+
 rule GERMLINE_CNV_CALLER:
-    input: interval = OUTPUT_DIR+"/whole_exome_cohort_gccontent.filtered.interval_list", tsv = expand(OUTPUT_DIR+"/count.{sample}.tsv", sample=SAMPLES_NAME,), priors = "conf/contig_ploidy_priors.tsv", anno = OUTPUT_DIR+"/whole_exome_annotated_intervals.tsv", ploidy=OUTPUT_DIR+"/ploidy-calls_chr"
-    output: directory(OUTPUT_DIR+"/cohort_germline_calling")
+    input: interval = OUTPUT_DIR+"/scatter/{fragment}/scattered.interval_list", tsv = expand(OUTPUT_DIR+"/count.{sample}.tsv", sample=SAMPLES_NAME,), priors = "conf/contig_ploidy_priors.tsv", anno = OUTPUT_DIR+"/whole_exome_annotated_intervals.tsv", ploidy=OUTPUT_DIR+"/ploidy-calls_chr"
+    params: prefix="fragment_{fragment}", outdir=OUTPUT_DIR+"/cohort_germline_calling"
+    output: model=directory(OUTPUT_DIR+"/cohort_germline_calling/{fragment}-model"), call=directory(OUTPUT_DIR+"/cohort_germline_calling/{fragment}-calls")
     conda: "envs/gatkcondaenv.yml"
     shell: """
-	export MKL_NUM_THREADS={config[GATK][MAX_THREADS]}
-    export OMP_NUM_THREADS={config[GATK][MAX_THREADS]}
-	a=""
-	for i in {input.tsv}; do a=$a" -I "$i; done
-	gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" GermlineCNVCaller \
-	-L {input.interval} \
-	--run-mode COHORT \
-	$a \
-	--contig-ploidy-calls {input.ploidy}/ploidy-calls \
-	--annotated-intervals {input.anno} \
-	--interval-merging-rule OVERLAPPING_ONLY \
-	--output {output} \
-	--output-prefix whole_exome \
-	--verbosity DEBUG
-	"""
+        export MKL_NUM_THREADS=12
+        export OMP_NUM_THREADS=12
+        a=""
+        for i in {input.tsv}; do a=$a" -I "$i; done
+        gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" GermlineCNVCaller \
+        -L {input.interval} \
+        --run-mode COHORT \
+        $a \
+        --contig-ploidy-calls {input.ploidy}/ploidy-calls \
+        --annotated-intervals {input.anno} \
+        --interval-merging-rule OVERLAPPING_ONLY \
+        --output {params.outdir} \
+        --output-prefix {params.prefix} \
+        --verbosity DEBUG
+        """
+
 
 def index(sample):
     for i in glob.glob(OUTPUT_DIR+"/cohort_germline_calling/whole_exome-calls/SAMPLE_*/sample_name.txt"):
@@ -127,24 +139,27 @@ def index(sample):
                return i.split('/')[-2].split('_')[1]
 
 rule POSTPROCESS:
-	input: germline = rules.GERMLINE_CNV_CALLER.output, sam = OUTPUT_DIR+"/count.{sample}.tsv"
-	output:	int = OUTPUT_DIR+"/{sample}.intervals.vcf.gz", seg = OUTPUT_DIR+"/{sample}.segments.vcf.gz", den = OUTPUT_DIR+"/{sample}.denoise"
-	params:	id = lambda wildcards: index(wildcards.sample), model_path = OUTPUT_DIR+"/cohort_germline_calling/whole_exome-model/", call_path = OUTPUT_DIR+"/cohort_germline_calling/whole_exome-model/", ploidy_path = OUTPUT_DIR+"/ploidy-calls_chr/ploidy-calls/", dict = HGDICT
-	conda: "envs/gatkcondaenv.yml"
-	shell: """
-	export MKL_NUM_THREADS=1
-	export OMP_NUM_THREADS=1
-	gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" PostprocessGermlineCNVCalls \
-	--model-shard-path {params.model_path} \
-	--calls-shard-path {params.call_path} \
-	--allosomal-contig chrX --allosomal-contig chrY \
-	--contig-ploidy-calls {params.ploidy_path} \
-	--sample-index {params.id} \
-	--output-genotyped-intervals {output.int} \
-	--output-genotyped-segments {output.seg} \
-	--output-denoised-copy-ratios {output.den} \
-	--sequence-dictionary {params.dict} 
-	"""
+        input: sam = OUTPUT_DIR+"/count.{sample}.tsv", model=expand(OUTPUT_DIR+"/cohort_germline_calling/{scatter}-model", scatter = SCATTER,), calls=expand(OUTPUT_DIR+"/cohort_germline_calling/{scatter}-calls", scatter = SCATTER,)
+        output: int = OUTPUT_DIR+"/{sample}.intervals.vcf.gz", seg = OUTPUT_DIR+"/{sample}.segments.vcf.gz", den = OUTPUT_DIR+"/{sample}.denoise"
+        params: id = lambda wildcards: index(wildcards.sample),
+                modelfiles = lambda wildcards, input: " --model-shard-path ".join(input.model),
+                callsfiles = lambda wildcards, input: " --calls-shard-path ".join(input.calls),
+				ploidy_path = OUTPUT_DIR+"/ploidy-calls_chr/ploidy-calls/", dict = HGDICT
+        conda: "envs/gatkcondaenv.yml"
+        shell: """
+        export MKL_NUM_THREADS=1
+        export OMP_NUM_THREADS=1
+        gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" PostprocessGermlineCNVCalls \
+        --model-shard-path {params.modelfiles} \
+        --calls-shard-path {params.callsfiles} \
+        --allosomal-contig chrX --allosomal-contig chrY \
+        --contig-ploidy-calls {params.ploidy_path} \
+        --sample-index {params.id} \
+        --output-genotyped-intervals {output.int} \
+        --output-genotyped-segments {output.seg} \
+        --output-denoised-copy-ratios {output.den} \
+        --sequence-dictionary {params.dict}
+        """
 	
 rule DATABASE:
 	input: expand(OUTPUT_DIR+"/{sample}.segments.vcf.gz", sample=SAMPLES_NAME,)
@@ -152,7 +167,7 @@ rule DATABASE:
 	script: "Scripts/gatk4_cnv_database_file_snakemake.py"
 		
 rule BED_SORT:
-	input: OUTPUT_DIR+"/database.tab" 
+	input: OUTPUT_DIR+"/database.tab"
 	output: OUTPUT_DIR+"/database_sorted.tab"
 	shell: """
 	echo -e "#CHR\tSTART\tSTOP\tCNV\tNUMBER\tSAMPLES" > {output}
