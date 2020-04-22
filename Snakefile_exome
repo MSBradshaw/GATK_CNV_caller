@@ -115,7 +115,7 @@ rule GERMLINE_CNV_CALLER:
     input: interval = OUTPUT_DIR+"/INTERVALS/scatter/{fragment}/scattered.interval_list", tsv = expand(OUTPUT_DIR+"/COUNTS/count.{sample}.tsv", sample=SAMPLES_NAME,), priors = "conf/contig_ploidy_priors.tsv", anno = OUTPUT_DIR+"/INTERVALS/whole_exome_annotated_intervals.tsv", ploidy=OUTPUT_DIR+"/ploidy-calls_chr"
     params: prefix="fragment_{fragment}", outdir=OUTPUT_DIR+"/cohort_germline_calling"
     resources: cnv_caller=1
-    output: model=directory(OUTPUT_DIR+"/cohort_germline_calling/fragment_{fragment}-model"), call=directory(OUTPUT_DIR+"/cohort_germline_calling/fargment_{fragment}-calls")
+    output: model=directory(OUTPUT_DIR+"/cohort_germline_calling/fragment_{fragment}-model"), call=directory(OUTPUT_DIR+"/cohort_germline_calling/fragment_{fragment}-calls")
     conda: "envs/gatkcondaenv.yml"
     shell: """
         export MKL_NUM_THREADS={config[GERMLINE_CNV_CALLER_CPU]}
