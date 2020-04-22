@@ -39,7 +39,7 @@ CHROMOSOME = ["chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "c
 ### RULES ### 
 
 rule target:
-    input: expand(OUTPUT_DIR+"/count.{sample}.tsv", sample=SAMPLES_NAME,), expand(OUTPUT_DIR+"/scatter/{scatter}/scattered.interval_list", scatter = SCATTER,), OUTPUT_DIR+"/ploidy-calls_chr", OUTPUT_DIR+"/cohort_germline_calling", expand(OUTPUT_DIR+"/{sample}.segments.vcf.gz", sample=SAMPLES_NAME,), OUTPUT_DIR+"/database_sorted.tab", expand(OUTPUT_DIR+"/{sample}.segments_filtered.vcf.gz", sample=SAMPLES_NAME,), expand(OUTPUT_DIR+"/{sample}.segments_filtered.vcf.gz", sample=SAMPLES_NAME,)
+    input: expand(OUTPUT_DIR+"/count.{sample}.tsv", sample=SAMPLES_NAME,), expand(OUTPUT_DIR+"/scatter/{scatter}/scattered.interval_list", scatter = SCATTER,), OUTPUT_DIR+"/ploidy-calls_chr", expand(OUTPUT_DIR+"/{sample}.segments.vcf.gz", sample=SAMPLES_NAME,), OUTPUT_DIR+"/database_sorted.tab", expand(OUTPUT_DIR+"/{sample}.segments_filtered.vcf.gz", sample=SAMPLES_NAME,), expand(OUTPUT_DIR+"/{sample}.segments_filtered.vcf.gz", sample=SAMPLES_NAME,)
 
 rule MAKE_INTERVALS:
     input: ref = REFERENCEGENOME, bed = BED 
