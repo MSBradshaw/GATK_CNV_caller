@@ -14,6 +14,8 @@ OUTPUT_DIR = config['OUTPUT_DIR']
 REFERENCEGENOME = config["HG_PATH"]
 HGDICT = config["DICT_PATH"]
 BED = config["BED_PATH"]
+OMIM = config['SV-EXOME_DIR']+"/ref/OMIM_gene_patho.txt"
+refseq = config['SV-EXOME_DIR']+"/ref/hg19_refGene.txt"
 
 SAMPLES_DIR = config["SAMPLES_PATH"]
 SAMPLE_WC = config["SAMPLE_WILDCARD"]
