@@ -18,8 +18,6 @@ OMIM = config['SV-EXOME_DIR']+"/ref/OMIM_gene_patho.txt"
 REFSEQ = config['SV-EXOME_DIR']+"/ref/hg19_refGene.txt"
 
 SAMPLES_DIR = config["SAMPLES_PATH"]
-SAMPLE_WC = config["SAMPLE_WILDCARD"]
-SAMPLES, = glob_wildcards(SAMPLES_DIR+"/"+SAMPLE_WC)
 
 SAMPLES_GLOB = glob.glob(SAMPLES_DIR+"/*am")
 
