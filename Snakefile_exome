@@ -188,7 +188,7 @@ rule MERGE_CNVS:
 	input: expand(OUTPUT_DIR+"/{sample}.segments_filtered_anno.tab", sample=SAMPLES_NAME,)
 	output: OUTPUT_DIR+"/all_cnv_calls_anno.tab"
     shell: """
-        a=0;
+        a=0
         for i in {input}; do 
         a=$((a+1))
         if [ $a -eq "1" ];
