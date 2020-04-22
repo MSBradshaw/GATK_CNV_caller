@@ -111,11 +111,12 @@ rule SCATTER:
 rule GERMLINE_CNV_CALLER:
     input: interval = OUTPUT_DIR+"/scatter/{fragment}/scattered.interval_list", tsv = expand(OUTPUT_DIR+"/count.{sample}.tsv", sample=SAMPLES_NAME,), priors = "conf/contig_ploidy_priors.tsv", anno = OUTPUT_DIR+"/whole_exome_annotated_intervals.tsv", ploidy=OUTPUT_DIR+"/ploidy-calls_chr"
     params: prefix="fragment_{fragment}", outdir=OUTPUT_DIR+"/cohort_germline_calling"
+    resources: cnv_caller=1
     output: model=directory(OUTPUT_DIR+"/cohort_germline_calling/{fragment}-model"), call=directory(OUTPUT_DIR+"/cohort_germline_calling/{fragment}-calls")
     conda: "envs/gatkcondaenv.yml"
     shell: """
-        export MKL_NUM_THREADS=12
-        export OMP_NUM_THREADS=12
+        export MKL_NUM_THREADS={config[GATK][MAX_THREADS]}
+        export OMP_NUM_THREADS={config[GATK][MAX_THREADS]}
         a=""
         for i in {input.tsv}; do a=$a" -I "$i; done
         gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" GermlineCNVCaller \
