@@ -115,8 +115,8 @@ rule GERMLINE_CNV_CALLER:
     output: model=directory(OUTPUT_DIR+"/cohort_germline_calling/{fragment}-model"), call=directory(OUTPUT_DIR+"/cohort_germline_calling/{fragment}-calls")
     conda: "envs/gatkcondaenv.yml"
     shell: """
-        export MKL_NUM_THREADS={config[GATK][MAX_THREADS]}
-        export OMP_NUM_THREADS={config[GATK][MAX_THREADS]}
+        export MKL_NUM_THREADS=5
+        export OMP_NUM_THREADS=5
         a=""
         for i in {input.tsv}; do a=$a" -I "$i; done
         gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" GermlineCNVCaller \
