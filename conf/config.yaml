@@ -11,8 +11,9 @@ BED_PATH: /sandbox/users/bcogne/externalshares/Bioinfo/Twist_Exome_plus_RefSeq_G
 # Directory with BAM or CRAM files
 SAMPLES_PATH: /sandbox/users/bcogne/externalshares/Bioinfo/CRAM
 
-# Parameters to retrieve sample name from bam or cram files:
-SAMPLE_WILDCARD: realigned_recal_{sample}.cram
+# Parameters to retrieve sample name from bam or cram files
+# For exemple if your bam or cram files are named: realigned_recal_NAME.bam, write as separator _ with index 2
+
 SAMPLE_SEPARATOR: _
 SAMPLE_INDEX: 2
 
