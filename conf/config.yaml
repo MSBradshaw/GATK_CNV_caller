@@ -18,7 +18,7 @@ SAMPLE_SEPARATOR: _
 SAMPLE_INDEX: 2
 
 # NUMBER OF CPU FOR GERMLINE CNV CALLER
-GERMLINE_CNV_CALLER_CPU=5
+GERMLINE_CNV_CALLER_CPU: 5
 # JAVA ARGUMENTS FOR GATK
 JAVA_ARGS:
     MAX_MEMORY: 8G                      # Maximum memory allocation pool for a Java virtual machine.
