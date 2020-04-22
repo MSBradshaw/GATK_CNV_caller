@@ -3,20 +3,15 @@
 import subprocess
 import sys
 import re
-# import MySQLdb // for python2
-# from MySQLdb import cursors
-import mysql.connector
 import urllib
 import gzip
 
-OMIM='/d2/Exome_analysis_BC/Exome_pipeline_datas/OMIM/OMIM_gene_patho.txt'
-refseq='/d2/Exome_analysis_BC/Exome_pipeline_datas/humandb/hg19_refGene.txt'
-
-### Path Canoes_file ###
+### Get paths of files from snakemake###
 VCF_file=snakemake.input[0]
+OMIM=snakemake.input[1]
+refseq=snakemake.input[2]
 OUT_file=snakemake.output[0]
-#VCF_file=sys.argv[1]
-#OUT_file=sys.argv[2]
+
 IN=gzip.open(VCF_file,'rt')
 OUT=open(OUT_file,'w')
 
@@ -44,7 +39,7 @@ for line in IN:
         if line[0:6] == "#CHROM":
             field=line.split('\t')
             name=field[9].rstrip()
-            OUT.write("SAMPLE\tSVTYPE\tKEY\tSIZE\tGENE\tpLI\tPATHO\tINTERNAL_DB\tVARIANTS_(hom|het)"+'\t'+'AD_DUP'+'\t'+'RARE_VARIANTS'+'\t'+'FREQ RARE VARIANTS(<0.005)'+'\t'+"CN\tNP\tQA\tQS\tQSE\tQSS"+"\n")
+            OUT.write("SAMPLE\tSVTYPE\tKEY\tSIZE\tGENE\tPATHO\tINTERNAL_DB\tCN\tNP\tQA\tQS\tQSE\tQSS"+"\n")
     else:
         field=line.split('\t')
 
@@ -115,159 +110,10 @@ for line in IN:
             OMIM_disease="."
         refseq_file.close()    
    
-    ### Variants from database annotation ###             
-        ### Get Internal database datas ###
-        # Database connection #
-        try:
-            db = mysql.connector.connect(host="127.0.0.1",user="bcogne",passwd="bencog15",database='Exome_db')
-            db2 = mysql.connector.connect(host="127.0.0.1",user="bcogne",passwd="bencog15",database='External_db')
-            
-            cur_gnomad = db2.cursor(buffered=True)
-            pLI=[]
-            for i in genes:
-                command = "SELECT pLI FROM gnomad_constraint WHERE gene='"+i+"';"
-                cur_gnomad.execute(command)
-                results = cur_gnomad.fetchall()
-                for row in results:
-                    pLI.append(str(round(row[0],2)))
-            cur_gnomad.close()
-            
-            cur = db.cursor(buffered=True)
-            command = "SELECT chr,pos,ref,alt,gene,loc,exon,zyg,AD,exonic_function FROM "+name+" WHERE loc='exonic' AND gene in (%s);" %('"'+'","'.join(genes)+'"')
-            cur.execute(command)
-            results = cur.fetchall() #... WHERE gene in ('gene1','gene2','..)
-            nb_variants_hom = 0
-            nb_variants_het = 0
-
-            variants_rares=[] #chr/pos/ref/alt/loc/freq
-            freq_list = []
-            gene_list = []
-            #OMIM_list = []
-            nb_variants_list = []
-            AD_ratio = []
-           
-            if 'DEL' in SVTYPE:
-                       
-                ### If query results exists ###
-                if results:
-                    for row in results:
-                    ### Get names to each column selected : chr,pos,ref,... ###
-                        chr = row[0]
-                        pos = row[1]
-                        ref = row[2]
-                        alt = row[3]
-                        gene = row[4]
-                        loc = row[5]
-                        zyg = row[7]
-                        AD = row[8]
-                        function = row[9]
-                        if zyg == 'het':
-                            nb_variants_het+=1
-                        else:
-                            nb_variants_hom+=1
-
-                        
-                        cur_exac = db2.cursor(buffered=True)
-                        ### Get internal database frequency and choose frequency < 0.005 ###
-                        command_exac = "SELECT freq FROM exac3 WHERE chr='"+str(chr)+"' AND pos="+str(pos)+" AND ref='"+str(ref)+"' AND alt='"+str(alt)+"';"
-                        cur_exac.execute(command_exac)
-                        if not cur_exac.rowcount:
-                            freq_list.append('.')
-                            variants_rares.append(str(gene)+'/'+str(chr)+'/'+str(pos)+'/'+str(ref)+'/'+str(alt)+'/'+str(zyg)+'/'+str(function))
-                        else:
-                            results_exac = cur_exac.fetchall()
-                            for row in results_exac:
-                                freq_exac = float(row[0])
-                                if freq_exac < 0.005:
-                                    freq_list.append(str(freq_exac))
-                                    variants_rares.append(str(gene)+'/'+str(chr)+'/'+str(pos)+'/'+str(ref)+'/'+str(alt)+'/'+str(zyg)+'/'+str(function))
-         
-                        #cur_exac.close()
-                    nb_variants_list.append(str(nb_variants_hom)+'|'+str(nb_variants_het))    
-                  
-            if 'DUP' in SVTYPE:
-               
-                ### If query results exists ###
-                if results:
-                    for row in results:
-                    ### Get names to each column selected : chr,pos,ref,... ###
-                        chr = row[0]
-                        pos = row[1]
-                        ref = row[2]
-                        alt = row[3]
-                        gene = row[4]
-                        loc = row[5]
-                        zyg = row[7]
-                        AD = row[8]
-                        function = row[9]
-                        cur_exac = db2.cursor(buffered=True)
-                        ### Get internal database frequency and choose frequency < 0.005 ###
-                        command_exac = "SELECT freq FROM exac3 WHERE chr='"+str(chr)+"' AND pos="+str(pos)+" AND ref='"+str(ref)+"' AND alt='"+str(alt)+"';"
-                        cur_exac.execute(command_exac)
-                        if not cur_exac.rowcount:
-                            freq_list.append('.')
-                            variants_rares.append(str(gene)+'/'+str(chr)+'/'+str(pos)+'/'+str(ref)+'/'+str(alt)+'/'+str(zyg)+'/'+str(function))
-                        
-                        else:
-                            results_exac = cur_exac.fetchall()
-                            for row in results_exac:
-                                freq_exac = float(row[0])
-                                if freq_exac < 0.005:
-                                    freq_list.append(str(freq_exac))
-                                    variants_rares.append(str(gene)+'/'+str(chr)+'/'+str(pos)+'/'+str(ref)+'/'+str(alt)+'/'+str(zyg)+'/'+str(function))   
-                        cur_exac.close()
-                        AD_ratio.append(str(AD))  
             ### Writing to OUT file ###
-            OUT.write(name+"\t"+SVTYPE+"\t"+cnv_key+"\t"+str(cnv_size)+"\t"+';'.join(genes)+'\t'+";".join(pLI)+"\t"+';'.join(OMIM_disease)+'\t'+internal_db+'\t'+''.join(nb_variants_list)+'\t'+'|'.join(AD_ratio)+'\t'+';'.join(variants_rares)+'\t'+';'.join(freq_list)+'\t'+CN+'\t'+NP+'\t'+QA+'\t'+QS+'\t'+QSE+'\t'+QSS+"\n")
+            OUT.write(name+"\t"+SVTYPE+"\t"+cnv_key+"\t"+str(cnv_size)+"\t"+';'.join(genes)+'\t'+';'.join(OMIM_disease)+'\t'+internal_db+'\t'+CN+'\t'+NP+'\t'+QA+'\t'+QS+'\t'+QSE+'\t'+QSS+"\n")
          
-            db2.commit()
-            db.commit()    
-            # Disconnection from server #
-            cur.close() 
-            
-        except:
-            exit()
     
 OUT.close() 
 IN.close() 
-
-# ### Dictionary from OUT file [gene:count gene] ### ### To replace/change if a database is created ###
-# ### count_gene count times a gene is observed in population ###
-# OUT_final=open(Canoes_file+'anno-final.tab','w')
-
-# OUT=open(Canoes_file+'anno.tab','r')
-# count_gene_lib={}
-# for line in OUT:
-    # count_gene=[]
-    # field=line.split('\t')
-    # field_gene=field[4].split(';')
-    # for gene in field_gene:
-        # if gene in count_gene_lib.keys():
-            # count_gene_lib[gene]+=1
-        # else:
-            # count_gene_lib[gene]=1 
-    # if field_gene==[]:
-        # count_gene[field_gene]=''
-
-
-# OUT.close()
-# OUT=open(Canoes_file+'anno.tab','r')
-# b=0
-
-# for line in OUT:
-    # b+=1
-    # field=line.split('\t')
-    # if b==1:
-            # OUT_final.write('\t'.join(field[0:6])+'\t'+'FREQ GENE'+'\t'+'\t'.join(field[7:]))
-            # pass
-    # else:  
-        # count_gene=[]
-        # gene_list=field[4].split(';')    
-        # for gene in gene_list:
-            # if gene in count_gene_lib.keys():
-                # count_gene.append(str(count_gene_lib[gene]))
-        # OUT_final.write('\t'.join(field[0:6])+'\t'+';'.join(count_gene)+'\t'+'\t'.join(field[7:]))
-
-# OUT.close()
-# OUT_final.close()
 
