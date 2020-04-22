@@ -39,7 +39,7 @@ CHROMOSOME = ["chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "c
 ### RULES ### 
 
 rule target:
-    input: expand(OUTPUT_DIR+"/count.{sample}.tsv", sample=SAMPLES_NAME,), expand(OUTPUT_DIR+"/scatter/{scatter}/scattered.interval_list", scatter = SCATTER,), OUTPUT_DIR+"/ploidy-calls_chr",  expand(OUTPUT_DIR+"/cohort_germline_calling/{fragment}-model", fragment = SCATTER,), expand(OUTPUT_DIR+"/cohort_germline_calling/{fragment}-calls", fragment = SCATTER,), expand(OUTPUT_DIR+"/{sample}.segments.vcf.gz", sample=SAMPLES_NAME,), OUTPUT_DIR+"/database_sorted.tab", expand(OUTPUT_DIR+"/{sample}.segments_filtered.vcf.gz", sample=SAMPLES_NAME,), expand(OUTPUT_DIR+"/{sample}.segments_filtered.vcf.gz", sample=SAMPLES_NAME,), OUTPUT_DIR+"/all_cnv_calls_anno.tab"
+    input: expand(OUTPUT_DIR+"/count.{sample}.tsv", sample=SAMPLES_NAME,), expand(OUTPUT_DIR+"/scatter/{scatter}/scattered.interval_list", scatter = SCATTER,), OUTPUT_DIR+"/ploidy-calls_chr",  expand(OUTPUT_DIR+"/cohort_germline_calling/fragment_{fragment}-model", fragment = SCATTER,), expand(OUTPUT_DIR+"/cohort_germline_calling/fragment_{fragment}-calls", fragment = SCATTER,), expand(OUTPUT_DIR+"/{sample}.segments.vcf.gz", sample=SAMPLES_NAME,), OUTPUT_DIR+"/database_sorted.tab", expand(OUTPUT_DIR+"/{sample}.segments_filtered.vcf.gz", sample=SAMPLES_NAME,), expand(OUTPUT_DIR+"/{sample}.segments_filtered.vcf.gz", sample=SAMPLES_NAME,), OUTPUT_DIR+"/all_cnv_calls_anno.tab"
 
 rule MAKE_INTERVALS:
     input: ref = REFERENCEGENOME, bed = BED 
