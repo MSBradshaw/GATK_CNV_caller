@@ -38,7 +38,7 @@ Have an activated conda environment with a recent version of snakemake
 
 2) Then launch pipeline with snakemake:
     ~~~
-    snakemake -s Snakefile_exome -j /Number of threads you wish/ --use-conda --configfile conf/config.yaml -resources cnv_caller=1
+    snakemake -s Snakefile_exome -j /Number of threads you wish/ --use-conda --configfile conf/config.yaml --resources cnv_caller=1
     ~~~
-    The parameter "-resources cnv_caller=1" is not required but allows to specifically attributes the number of germline cnv calling jobs run in parallel as it is really consuming a lot of RAM, which increase proportionally to the number of samples processed. Exemple: for 150 exomes, if you have more than 100Go RAM and at least 20 CPUs available (default value of 5 CPUs per job in the config file), you can consider using the maximum: cnv_caller=4 (default value if you choose -j options of at least 4CPUs)
+    The parameter "--resources cnv_caller=1" is not required but allows to specifically attributes the number of germline cnv calling jobs run in parallel as it is really consuming a lot of RAM, which increase proportionally to the number of samples processed. Exemple: for 150 exomes, if you have more than 100Go RAM and at least 20 CPUs available (default value of 5 CPUs per job in the config file), you can consider using the maximum: cnv_caller=4 (default value if you choose -j options of at least 4CPUs)
 
