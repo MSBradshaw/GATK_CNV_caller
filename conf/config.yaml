@@ -21,7 +21,8 @@ SAMPLE_INDEX: 2
 # If you use CASE mode, put the math to the model directory and the database file
 
 MODE: COHORT
-MODEL_PATH: 
+GERMLINE_MODEL_PATH: 
+PLOIDY_MODEL_PATH: 
 DATABASE_PATH: 
 
 # NUMBER OF CPU FOR GERMLINE CNV CALLER
