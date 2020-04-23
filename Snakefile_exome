@@ -20,10 +20,12 @@ REFSEQ = config['SV-EXOME_DIR']+"/ref/hg19_refGene.txt"
 # Get run mode parameters
 MODE = config["MODE"]
 if MODE == "CASE":
-    MODEL_DIR = config["MODEL_PATH"]
+    MODEL_DIR = config["GERMLINE_MODEL_PATH"]
+    PLOIDY_DIR = config["PLOIDY_MODEL_PATH"]
     DATABASE_PATH = config["DATABASE_PATH"]
 elif MODE == "COHORT":
     MODEL_DIR = OUTPUT_DIR+"/cohort_germline_calling"
+    PLOIDY_DIR = OUTPUT_DIR+"/ploidy-calls_chr"
     DATABASE_PATH = OUTPUT_DIR+"/database_sorted.tab"
 else:
     exit("MODE OF CALLING SHOULD BE: CASE or COHORT")
@@ -101,17 +103,23 @@ rule FILTER_INTERVALS:
 	gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" FilterIntervals -L {input.interval} --annotated-intervals {input.annotated} $a -imr OVERLAPPING_ONLY -O {output} 
 	"""
 
+def PLOIDY_PARAM(cohort):
+    if model == "CASE":
+        return { "in" : "--model "+PLOIDY_DIR }
+    elif model == "COHORT":
+        return { "in" : "-L "+cohort }
+
 rule PLOIDY:
     input: cohort = OUTPUT_DIR+"/INTERVALS/whole_exome_cohort_gccontent.filtered.interval_list", priors = "conf/contig_ploidy_priors.tsv", tsv = expand(OUTPUT_DIR+"/COUNTS/count.{sample}.tsv", sample=SAMPLES_NAME,)
     output: directory(OUTPUT_DIR+"/ploidy-calls_chr")
-    params: prefix = "ploidy"
+    params: prefix = "ploidy", PLOIDY_PARAM({input.cohort})
     conda: "envs/gatkcondaenv.yml"
     shell: """
 	export MKL_NUM_THREADS={config[GATK][MAX_THREADS]}
 	export OMP_NUM_THREADS={config[GATK][MAX_THREADS]}
 	a=""
 	for i in {input.tsv}; do a=$a" -I "$i; done
-	gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" DetermineGermlineContigPloidy -L {input.cohort} $a --imr OVERLAPPING_ONLY --contig-ploidy-priors {input.priors} --output {output} --output-prefix {params}
+	gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" DetermineGermlineContigPloidy {params.in} $a --imr OVERLAPPING_ONLY --contig-ploidy-priors {input.priors} --output {output} --output-prefix {params}
 	"""
 
 rule SCATTER:
