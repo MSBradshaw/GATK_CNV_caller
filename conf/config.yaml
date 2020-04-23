@@ -17,6 +17,13 @@ SAMPLES_PATH: /sandbox/users/bcogne/externalshares/Bioinfo/CRAM
 SAMPLE_SEPARATOR: _
 SAMPLE_INDEX: 2
 
+# Parameters to run germline cnv calling: either COHORT or CASE mode
+# If you use CASE mode, put the math to the model directory and the database file
+
+MODE: COHORT
+MODEL_PATH: 
+DATABASE_PATH: 
+
 # NUMBER OF CPU FOR GERMLINE CNV CALLER
 GERMLINE_CNV_CALLER_CPU: 5
 # JAVA ARGUMENTS FOR GATK
