@@ -105,21 +105,21 @@ rule FILTER_INTERVALS:
 
 def PLOIDY_PARAM(cohort):
     if model == "CASE":
-        return { "in" : "--model "+PLOIDY_DIR }
+        return { "in" : "--model "+PLOIDY_DIR, "prefix" : "ploidy" }
     elif model == "COHORT":
-        return { "in" : "-L "+cohort }
+        return { "in" : "-L "+OUTPUT_DIR+"/INTERVALS/whole_exome_cohort_gccontent.filtered.interval_list", "prefix" : "ploidy" }
 
 rule PLOIDY:
     input: cohort = OUTPUT_DIR+"/INTERVALS/whole_exome_cohort_gccontent.filtered.interval_list", priors = "conf/contig_ploidy_priors.tsv", tsv = expand(OUTPUT_DIR+"/COUNTS/count.{sample}.tsv", sample=SAMPLES_NAME,)
     output: directory(OUTPUT_DIR+"/ploidy-calls_chr")
-    params: prefix = "ploidy", PLOIDY_PARAM({input.cohort})
+    params: unpack(PLOIDY_PARAM)
     conda: "envs/gatkcondaenv.yml"
     shell: """
 	export MKL_NUM_THREADS={config[GATK][MAX_THREADS]}
 	export OMP_NUM_THREADS={config[GATK][MAX_THREADS]}
 	a=""
 	for i in {input.tsv}; do a=$a" -I "$i; done
-	gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" DetermineGermlineContigPloidy {params.in} $a --imr OVERLAPPING_ONLY --contig-ploidy-priors {input.priors} --output {output} --output-prefix {params}
+	gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" DetermineGermlineContigPloidy {params.in} $a --imr OVERLAPPING_ONLY --contig-ploidy-priors {input.priors} --output {output} --output-prefix {params.prefix}
 	"""
 
 rule SCATTER:
