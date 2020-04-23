@@ -17,6 +17,18 @@ BED = config["BED_PATH"]
 OMIM = config['SV-EXOME_DIR']+"/ref/OMIM_gene_patho.txt"
 REFSEQ = config['SV-EXOME_DIR']+"/ref/hg19_refGene.txt"
 
+# Get run mode parameters
+MODE = config["MODE"]
+if MODE == "CASE":
+    MODEL_DIR = config["MODEL_PATH"]
+    DATABASE_PATH = config["DATABASE_PATH"]
+elif MODE == "COHORT":
+    MODEL_DIR = OUTPUT_DIR+"/cohort_germline_calling"
+    DATABASE_PATH = OUTPUT_DIR+"/database_sorted.tab"
+else:
+    exit("MODE OF CALLING SHOULD BE: CASE or COHORT")
+
+# Get sample name information
 SAMPLES_DIR = config["SAMPLES_PATH"]
 
 SAMPLES_GLOB = glob.glob(SAMPLES_DIR+"/*am")
@@ -39,7 +51,7 @@ SCATTER = ["temp_0001_of_4","temp_0002_of_4","temp_0003_of_4","temp_0004_of_4"]
 ### RULES ### 
 
 rule target:
-    input: expand(OUTPUT_DIR+"/COUNTS/count.{sample}.tsv", sample=SAMPLES_NAME,), expand(OUTPUT_DIR+"/INTERVALS/scatter/{scatter}/scattered.interval_list", scatter = SCATTER,), OUTPUT_DIR+"/ploidy-calls_chr",  expand(OUTPUT_DIR+"/cohort_germline_calling/fragment_{fragment}-model", fragment = SCATTER,), expand(OUTPUT_DIR+"/cohort_germline_calling/fragment_{fragment}-calls", fragment = SCATTER,), expand(OUTPUT_DIR+"/VCF/{sample}.segments.vcf.gz", sample=SAMPLES_NAME,), OUTPUT_DIR+"/database_sorted.tab", expand(OUTPUT_DIR+"/VCF/{sample}.segments_filtered.vcf.gz", sample=SAMPLES_NAME,), OUTPUT_DIR+"/all_cnv_calls_anno.tab"
+    input: expand(OUTPUT_DIR+"/COUNTS/count.{sample}.tsv", sample=SAMPLES_NAME,), expand(OUTPUT_DIR+"/INTERVALS/scatter/{scatter}/scattered.interval_list", scatter = SCATTER,), OUTPUT_DIR+"/ploidy-calls_chr",  expand(OUTPUT_DIR+"/cohort_germline_calling/fragment_{fragment}-calls", fragment = SCATTER,), expand(OUTPUT_DIR+"/VCF/{sample}.segments.vcf.gz", sample=SAMPLES_NAME,), OUTPUT_DIR+"/database_sorted.tab", expand(OUTPUT_DIR+"/VCF/{sample}.segments_filtered.vcf.gz", sample=SAMPLES_NAME,), OUTPUT_DIR+"/all_cnv_calls_anno.tab"
 
 rule MAKE_INTERVALS:
     input: ref = REFERENCEGENOME, bed = BED 
@@ -113,9 +125,9 @@ rule SCATTER:
 
 rule GERMLINE_CNV_CALLER:
     input: interval = OUTPUT_DIR+"/INTERVALS/scatter/{fragment}/scattered.interval_list", tsv = expand(OUTPUT_DIR+"/COUNTS/count.{sample}.tsv", sample=SAMPLES_NAME,), priors = "conf/contig_ploidy_priors.tsv", anno = OUTPUT_DIR+"/INTERVALS/whole_exome_annotated_intervals.tsv", ploidy=OUTPUT_DIR+"/ploidy-calls_chr"
-    params: prefix="fragment_{fragment}", outdir=OUTPUT_DIR+"/cohort_germline_calling"
+    params: prefix="fragment_{fragment}", outdir=MODEL_DIR, mode=MODE
     resources: cnv_caller=1
-    output: model=directory(OUTPUT_DIR+"/cohort_germline_calling/fragment_{fragment}-model"), call=directory(OUTPUT_DIR+"/cohort_germline_calling/fragment_{fragment}-calls")
+    output: call=directory(OUTPUT_DIR+"/cohort_germline_calling/fragment_{fragment}-calls")
     conda: "envs/gatkcondaenv.yml"
     shell: """
         export MKL_NUM_THREADS={config[GERMLINE_CNV_CALLER_CPU]}
@@ -124,7 +136,7 @@ rule GERMLINE_CNV_CALLER:
         for i in {input.tsv}; do a=$a" -I "$i; done
         gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" GermlineCNVCaller \
         -L {input.interval} \
-        --run-mode COHORT \
+        --run-mode {params.mode} \
         $a \
         --contig-ploidy-calls {input.ploidy}/ploidy-calls \
         --annotated-intervals {input.anno} \
@@ -143,7 +155,7 @@ def index(sample):
                return i.split('/')[-2].split('_')[1]
 
 rule POSTPROCESS:
-        input: sam = OUTPUT_DIR+"/COUNTS/count.{sample}.tsv", model=expand(OUTPUT_DIR+"/cohort_germline_calling/fragment_{scatter}-model", scatter = SCATTER,), calls=expand(OUTPUT_DIR+"/cohort_germline_calling/fragment_{scatter}-calls", scatter = SCATTER,)
+        input: sam = OUTPUT_DIR+"/COUNTS/count.{sample}.tsv", model=expand(MODEL_DIR+"/fragment_{scatter}-model", scatter = SCATTER,), calls=expand(OUTPUT_DIR+"/cohort_germline_calling/fragment_{scatter}-calls", scatter = SCATTER,)
         output: int = OUTPUT_DIR+"/VCF/{sample}.intervals.vcf.gz", seg = OUTPUT_DIR+"/VCF/{sample}.segments.vcf.gz", den = OUTPUT_DIR+"/VCF/{sample}.denoise"
         params: id = lambda wildcards: index(wildcards.sample), ploidy_path = OUTPUT_DIR+"/ploidy-calls_chr/ploidy-calls/", dict = HGDICT,
                 modelfiles = lambda wildcards, input: " --model-shard-path ".join(input.model),
@@ -166,12 +178,13 @@ rule POSTPROCESS:
 	
 rule DATABASE:
 	input: expand(OUTPUT_DIR+"/VCF/{sample}.segments.vcf.gz", sample=SAMPLES_NAME,)
-	output: temp(OUTPUT_DIR+"/database.tab")
+	params: DATABASE_PATH
+    output: temp(OUTPUT_DIR+"/database.tab")
 	script: "Scripts/gatk4_cnv_database_file_snakemake.py"
 		
 rule BED_SORT:
 	input: OUTPUT_DIR+"/database.tab"
-	output: OUTPUT_DIR+"/database_sorted.tab"
+	output: DATABASE_PATH
 	shell: """
 	echo -e "#CHR\tSTART\tSTOP\tCNV\tNUMBER\tSAMPLES" > {output}
 	sort -V -k1,1 -k 2,2 {input} >> {output}
