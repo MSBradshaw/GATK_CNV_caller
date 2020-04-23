@@ -179,7 +179,7 @@ rule POSTPROCESS:
 rule DATABASE:
 	input: expand(OUTPUT_DIR+"/VCF/{sample}.segments.vcf.gz", sample=SAMPLES_NAME,)
 	params: DATABASE_PATH
-    output: temp(OUTPUT_DIR+"/database.tab")
+	output: temp(OUTPUT_DIR+"/database.tab")
 	script: "Scripts/gatk4_cnv_database_file_snakemake.py"
 		
 rule BED_SORT:
