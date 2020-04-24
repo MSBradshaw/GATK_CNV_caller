@@ -45,7 +45,7 @@ for file in files_vcf:
         exit()
                 
     for line in l:
-        if line0:6] == "#CHROM":
+        if line[0:6] == "#CHROM":
             name=line.split('\t')[9].rstrip()
         if line[0] != "#":
             field=line.split('\t')
