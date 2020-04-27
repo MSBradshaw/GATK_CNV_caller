@@ -37,7 +37,7 @@ for line in gnomAD:
         continue
     field=line.split('\t')
     if field[0] in gnomAD_lib.keys():
-        if float(field[1].rstrip()) > float(gnomAD_lib[field[0]):
+        if float(field[1].rstrip()) > float(gnomAD_lib[field[0]]):
             gnomAD_lib[field[0]]=field[1].rstrip()
     else:
         gnomAD_lib[field[0]]=[field[1].rstrip()]
