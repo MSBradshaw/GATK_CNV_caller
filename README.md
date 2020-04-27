@@ -25,9 +25,9 @@ Have an activated conda environment with a recent version of snakemake
     cd sv-exome
     ~~~
 
-2) Unzip the hg19 refseq file
+2) Unzip the data reference files 
     ~~~
-    gunzip ref/hg19_refGene.txt.gz
+    gunzip ref/*.gz
     ~~~
 
 3) Edit the environment file "envs/gatkcondaenv.yml": Add the absolute path of the last line: /path/to/sv-exome/envs/gatkPythonPackageArchive.zip
