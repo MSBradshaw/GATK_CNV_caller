@@ -131,27 +131,38 @@ rule SCATTER:
         gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}"  IntervalListTools --SUBDIVISION_MODE BALANCING_WITHOUT_INTERVAL_SUBDIVISION --SCATTER_COUNT 4 --INPUT {input} --OUTPUT {params.dir}
         """
 
+def germline_conf(wildcards):
+    if MODE == "CASE":
+        dic = { 'mode' : MODE+' --model '+MODEL_DIR+'/'+list({wildcards.fragment})[0]+'-model' }
+    elif MODE == "COHORT":
+        dic = { 'mode' : MODE+' --annotated-intervals '+OUTPUT_DIR+'/INTERVALS/whole_exome_annotated_intervals.tsv --interval-merging-rule OVERLAPPING_ONLY -L '+OUTPUT_DIR+'/INTERVALS/scat$
+    return dic
+
 rule GERMLINE_CNV_CALLER:
-    input: interval = OUTPUT_DIR+"/INTERVALS/scatter/{fragment}/scattered.interval_list", tsv = expand(OUTPUT_DIR+"/COUNTS/count.{sample}.tsv", sample=SAMPLES_NAME,), priors = "conf/contig_ploidy_priors.tsv", anno = OUTPUT_DIR+"/INTERVALS/whole_exome_annotated_intervals.tsv", ploidy=OUTPUT_DIR+"/ploidy-calls_chr"
-    params: prefix="{fragment}", outdir=MODEL_DIR, mode=MODE
+    input: interval = OUTPUT_DIR+"/INTERVALS/scatter/{fragment}/scattered.interval_list", tsv = expand(OUTPUT_DIR+"/COUNTS/count.{sample}.tsv", sample=SAMPLES_NAME,), anno = OUTPUT_DIR+"/INTERVALS/whole_exome_annotated_intervals.tsv", ploidy=OUTPUT_DIR+"/ploidy-calls_chr"
+    params: prefix="{fragment}",  p=germline_conf, dir=OUTPUT_DIR+"/cohort_germline_calling"
     resources: cnv_caller=1
-    output: directory(OUTPUT_DIR+"/cohort_germline_calling/{fragment}-calls")
+    output: call = directory(OUTPUT_DIR+"/cohort_germline_calling/{fragment}-calls")
     conda: "envs/gatkcondaenv.yml"
     shell: """
         export MKL_NUM_THREADS={config[GERMLINE_CNV_CALLER_CPU]}
         export OMP_NUM_THREADS={config[GERMLINE_CNV_CALLER_CPU]}
+
+        mkdir {config[TEMP_DIR]}"/COMPILEDIR_{wildcards.fragment}"
+        echo -e "[global]\nbase_compiledir = "{config[TEMP_DIR]}"/COMPILEDIR_{wildcards.fragment}" > {config[TEMP_DIR]}"/THEANORC_{wildcards.fragment}"
+        export THEANORC={config[TEMP_DIR]}"/THEANORC_"{wildcards.fragment}
+
         a=""
         for i in {input.tsv}; do a=$a" -I "$i; done
         gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" GermlineCNVCaller \
-        -L {input.interval} \
-        --run-mode {params.mode} \
+        --run-mode {params.p[mode]} \
         $a \
         --contig-ploidy-calls {input.ploidy}/ploidy-calls \
-        --annotated-intervals {input.anno} \
-        --interval-merging-rule OVERLAPPING_ONLY \
-        --output {output} \
+        --output {params.dir} \
         --output-prefix {params.prefix} \
         --verbosity DEBUG
+
+        rm -r {config[TEMP_DIR]}"/COMPILEDIR_{wildcards.fragment}"
         """
 
 
