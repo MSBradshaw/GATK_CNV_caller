@@ -126,7 +126,7 @@ for line in IN:
                             OMIM_disease.append('.')
                         
                         if name_gene in gnomAD_lib.keys():
-                            gnomAD_pLI.append(int(gnomAD_lib[name_gene]))
+                            gnomAD_pLI.append(float(gnomAD_lib[name_gene]))
                             gnomAD_match=True                     
 
                         genes.append(name_gene)
@@ -134,13 +134,14 @@ for line in IN:
             OMIM_disease="."
         if not gnomAD_match:
             gnomAD_pLI=-1
-        if len(gnomAD_pLI) > 1:
+        elif len(gnomAD_pLI) > 1:
             gnomAD_pLI=round(max(gnomAD_pLI),2)
-        
+        else:
+            gnomAD_pLI=round(gnomAD_pLI[0],2)
         refseq_file.close()    
    
         ### Writing to OUT file ###
-        OUT.write(name+"\t"+SVTYPE+"\t"+cnv_key+"\t"+str(cnv_size)+"\t"+';'.join(genes)+'\t'+gnomAD_pLI+'\t'+';'.join(OMIM_disease)+'\t'+internal_db+'\t'+CN+'\t'+NP+'\t'+QA+'\t'+QS+'\t'+QSE+'\t'+QSS+"\n")
+        OUT.write(name+"\t"+SVTYPE+"\t"+cnv_key+"\t"+str(cnv_size)+"\t"+';'.join(genes)+'\t'+str(gnomAD_pLI)+'\t'+';'.join(OMIM_disease)+'\t'+internal_db+'\t'+CN+'\t'+NP+'\t'+QA+'\t'+QS+'\t'+QSE+'\t'+QSS+"\n")
          
     
 OUT.close() 
