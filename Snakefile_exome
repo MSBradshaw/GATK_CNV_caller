@@ -104,9 +104,9 @@ rule FILTER_INTERVALS:
 	"""
 
 def PLOIDY_PARAM(wildcards):
-    if model == "CASE":
+    if MODE == "CASE":
         return { "in" : "--model "+PLOIDY_DIR, "prefix" : "ploidy" }
-    elif model == "COHORT":
+    elif MODE == "COHORT":
         return { "in" : "-L "+OUTPUT_DIR+"/INTERVALS/whole_exome_cohort_gccontent.filtered.interval_list --contig-ploidy-priors conf/contig_ploidy_priors.tsv", "prefix" : "ploidy" }
 
 rule PLOIDY:
