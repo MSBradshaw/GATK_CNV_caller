@@ -13,9 +13,10 @@ SAMPLES_PATH: /sandbox/users/bcogne/externalshares/Bioinfo/CRAM
 
 # Parameters to retrieve sample name from bam or cram files
 # For exemple if your bam or cram files are named: realigned_recal_NAME.bam, write as separator _ with index 2
-
+# You can define samples you want to perform the analysis by giving a list of your sample's names to SAMPLE_LIST: Sample1,Sample2,...
 SAMPLE_SEPARATOR: _
 SAMPLE_INDEX: 2
+SAMPLE_LIST: 
 
 # Parameters to run germline cnv calling: either COHORT or CASE mode
 # If you use CASE mode, put the math to the model directory and the database file
