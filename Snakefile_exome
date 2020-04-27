@@ -135,7 +135,7 @@ def germline_conf(wildcards):
     if MODE == "CASE":
         dic = { 'mode' : MODE+' --model '+MODEL_DIR+'/'+list({wildcards.fragment})[0]+'-model' }
     elif MODE == "COHORT":
-        dic = { 'mode' : MODE+' --annotated-intervals '+OUTPUT_DIR+'/INTERVALS/whole_exome_annotated_intervals.tsv --interval-merging-rule OVERLAPPING_ONLY -L '+OUTPUT_DIR+'/INTERVALS/scat$
+        dic = { 'mode' : MODE+' --annotated-intervals '+OUTPUT_DIR+'/INTERVALS/whole_exome_annotated_intervals.tsv --interval-merging-rule OVERLAPPING_ONLY -L '+OUTPUT_DIR+'/INTERVALS/scatter/'+list({wildcards.fragment})[0]+'/scattered.interval_list' }
     return dic
 
 rule GERMLINE_CNV_CALLER:
