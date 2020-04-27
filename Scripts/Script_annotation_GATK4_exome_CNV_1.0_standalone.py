@@ -10,6 +10,7 @@ import gzip
 VCF_file=snakemake.input[0]
 OMIM=snakemake.input[1]
 refseq=snakemake.input[2]
+gnomAD_file=snakemake.input[3]
 OUT_file=snakemake.output[0]
 
 IN=gzip.open(VCF_file,'rt')
@@ -26,6 +27,22 @@ for line in OMIM:
         OMIM_lib[field[0]]=[field[1][:-1]]
 OMIM.close()
 
+### Dictionary from gnomAD constraint file ###
+gnomAD=open(gnomAD_file,'r')
+gnomAD_lib={}
+a=0
+for line in gnomAD:
+    a+=1
+    if a == 1:
+        continue
+    field=line.split('\t')
+    if field[0] in gnomAD_lib.keys():
+        if int(field[1].rstrip()) > int(gnomAD_lib[field[0]]):
+            gnomAD_lib[field[0]]=field[1].rstrip()
+    else:
+        gnomAD_lib[field[0]]=[field[1].rstrip()]
+gnomAD.close()
+
 gene_disease=''
 a=0
 cnv_del_count=0
@@ -39,7 +56,7 @@ for line in IN:
         if line[0:6] == "#CHROM":
             field=line.split('\t')
             name=field[9].rstrip()
-            OUT.write("SAMPLE\tSVTYPE\tKEY\tSIZE\tGENE\tPATHO\tINTERNAL_DB\tCN\tNP\tQA\tQS\tQSE\tQSS"+"\n")
+            OUT.write("SAMPLE\tSVTYPE\tKEY\tSIZE\tGENE\tpLI\tPATHO\tINTERNAL_DB\tCN\tNP\tQA\tQS\tQSE\tQSS"+"\n")
     else:
         field=line.split('\t')
 
@@ -86,6 +103,8 @@ for line in IN:
         genes=[]
         OMIM_disease=[]
         OMIM_match=False
+        gnomAD_pLI=[]
+        gnomAD_match=False
         exon=[]
         refseq_file=open(refseq,'r')
         for line in refseq_file:
@@ -105,13 +124,23 @@ for line in IN:
                             OMIM_match=True
                         if name_gene not in OMIM_lib.keys():
                             OMIM_disease.append('.')
+                        
+                        if name_gene in gnomAD_lib.keys():
+                            gnomAD_pLI.append(int(gnomAD_lib[name_gene]))
+                            gnomAD_match=True                     
+
                         genes.append(name_gene)
         if not OMIM_match:
             OMIM_disease="."
+        if not gnomAD_match:
+            gnomAD_pLI=-1
+        if len(gnomAD_pLI) > 1:
+            gnomAD_pLI=round(max(gnomAD_pLI),2)
+        
         refseq_file.close()    
    
         ### Writing to OUT file ###
-        OUT.write(name+"\t"+SVTYPE+"\t"+cnv_key+"\t"+str(cnv_size)+"\t"+';'.join(genes)+'\t'+';'.join(OMIM_disease)+'\t'+internal_db+'\t'+CN+'\t'+NP+'\t'+QA+'\t'+QS+'\t'+QSE+'\t'+QSS+"\n")
+        OUT.write(name+"\t"+SVTYPE+"\t"+cnv_key+"\t"+str(cnv_size)+"\t"+';'.join(genes)+'\t'+gnomAD_pLI+'\t'+';'.join(OMIM_disease)+'\t'+internal_db+'\t'+CN+'\t'+NP+'\t'+QA+'\t'+QS+'\t'+QSE+'\t'+QSS+"\n")
          
     
 OUT.close() 
