@@ -21,12 +21,13 @@ SAMPLE_INDEX: 2
 # If you use CASE mode, put the math to the model directory and the database file
 
 MODE: COHORT
-GERMLINE_MODEL_PATH: 
-PLOIDY_MODEL_PATH: 
-DATABASE_PATH: 
+GERMLINE_MODEL_PATH: /sandbox/users/bcogne/externalshares/Bioinfo/MODEL/cohort_germline_calling
+PLOIDY_MODEL_PATH: /sandbox/users/bcogne/externalshares/Bioinfo/MODEL/ploidy-model
+DATABASE_PATH: /sandbox/users/bcogne/externalshares/Bioinfo/MODEL/database_sorted.tab
 
 # NUMBER OF CPU FOR GERMLINE CNV CALLER
 GERMLINE_CNV_CALLER_CPU: 5
+
 # JAVA ARGUMENTS FOR GATK
 JAVA_ARGS:
     MAX_MEMORY: 8G                      # Maximum memory allocation pool for a Java virtual machine.
