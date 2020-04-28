@@ -231,7 +231,7 @@ rule FILTER_VCF:
 	script: "Scripts/VCF_CNV_GATK4_denovo_annotate_filter.py" 
 
 rule ANNOT_VCF:
-	input: OUTPUT_DIR+"/VCF/{sample}.segments_filtered.vcf.gz", omim = OMIM, refseq = REFSEQ, gnomad = GNOMAD, max_freq = MAX_FREQ, DATABASE_PATH
+	input: OUTPUT_DIR+"/VCF/{sample}.segments_filtered.vcf.gz", omim = OMIM, refseq = REFSEQ, gnomad = GNOMAD, max_freq = MAX_FREQ, db = DATABASE_PATH
 	output: OUTPUT_DIR+"/ANNO/{sample}.segments_filtered_anno.tab"
 	script: "Scripts/Script_annotation_GATK4_exome_CNV_1.0_standalone.py"
 
