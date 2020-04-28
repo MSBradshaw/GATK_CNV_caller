@@ -49,4 +49,4 @@ dependencies:
   - theano==1.0.4
   - tqdm==4.19.4
   - werkzeug==0.12.2
-  - /ceph-recherche/users/bcogne/SV-exome/envs/gatkPythonPackageArchive.zip
+  - /ceph-recherche/users/bcogne/SV-exome/test_CASE/sv-exome/envs/gatkPythonPackageArchive.zip
