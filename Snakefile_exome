@@ -192,8 +192,8 @@ def index(sample):
 rule POSTPROCESS:
         input: sam = OUTPUT_DIR+"/COUNTS/count.{sample}.tsv", calls=expand(OUTPUT_DIR+"/cohort_germline_calling/{scatter}-calls", scatter = SCATTER,)
         output: int = OUTPUT_DIR+"/VCF/{sample}.intervals.vcf.gz", seg = OUTPUT_DIR+"/VCF/{sample}.segments.vcf.gz", den = OUTPUT_DIR+"/VCF/{sample}.denoise"
-        params: id = lambda wildcards: index(wildcards.sample), ploidy_path = OUTPUT_DIR+"/ploidy-calls_chr/ploidy-calls/", model = expand(MODEL_DIR+"/{scatter}-model", scatter = SCATTER,), dict = HGDICT,
-                modelfiles = lambda wildcards, input: " --model-shard-path ".join(params.model),
+        params: id = lambda wildcards: index(wildcards.sample), ploidy_path = OUTPUT_DIR+"/ploidy-calls_chr/ploidy-calls/", dict = HGDICT,
+                modelfiles = lambda wildcards, input: " --model-shard-path ".join([x.replace('-calls','-model') for x in input.calls]),
                 callsfiles = lambda wildcards, input: " --calls-shard-path ".join(input.calls),
         conda: "envs/gatkcondaenv.yml"
         shell: """
