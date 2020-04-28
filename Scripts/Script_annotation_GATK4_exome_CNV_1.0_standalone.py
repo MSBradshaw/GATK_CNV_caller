@@ -40,7 +40,7 @@ for line in gnomAD:
         if float(field[1].rstrip()) > float(gnomAD_lib[field[0]]):
             gnomAD_lib[field[0]]=field[1].rstrip()
     else:
-        gnomAD_lib[field[0]]=[field[1].rstrip()]
+        gnomAD_lib[field[0]]=field[1].rstrip()
 gnomAD.close()
 
 gene_disease=''
