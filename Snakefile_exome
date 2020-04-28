@@ -14,9 +14,9 @@ OUTPUT_DIR = config['OUTPUT_DIR']
 REFERENCEGENOME = config["HG_PATH"]
 HGDICT = config["DICT_PATH"]
 BED = config["BED_PATH"]
-OMIM = config['SV-EXOME_DIR']+"/ref/OMIM_gene_patho.txt"
-REFSEQ = config['SV-EXOME_DIR']+"/ref/hg19_refGene.txt"
-GNOMAD = config['SV-EXOME_DIR']+"/ref/gnomAD_gene_pLI.txt"
+OMIM = config['SV-EXOME_DIR']+"/ref/OMIM_gene_patho.txt.gz"
+REFSEQ = config['SV-EXOME_DIR']+"/ref/hg19_refGene.txt.gz"
+GNOMAD = config['SV-EXOME_DIR']+"/ref/gnomAD_gene_pLI.txt.gz"
 
 # Get run mode parameters
 MODE = config["MODE"]
