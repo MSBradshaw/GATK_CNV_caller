@@ -27,7 +27,7 @@ if MODE == "CASE":
 elif MODE == "COHORT":
     MODEL_DIR = OUTPUT_DIR+"/cohort_germline_calling"
     PLOIDY_DIR = OUTPUT_DIR+"/ploidy-calls_chr"
-    DATABASE_PATH = OUTPUT_DIR+"/database_sorted.tab"
+    DATABASE_PATH = OUTPUT_DIR+"/database_sorted.bed"
 else:
     exit("MODE OF CALLING SHOULD BE: CASE or COHORT")
 
@@ -53,7 +53,11 @@ for i in SAMPLES_GLOB:
         else:
             SAMPLES_NAME.append(name_samp)
 
-SCATTER = ["temp_0001_of_4","temp_0002_of_4","temp_0003_of_4","temp_0004_of_4"]
+intervals=range(config["NUMBER_INTERVALS"])
+#SCATTER = ["temp_0001_of_4","temp_0002_of_4","temp_0003_of_4","temp_0004_of_4"]
+SCATTER=[]
+for i in intervals:
+    SCATTER.append("temp_000"+str(i+1)+"_of_"+str(config["NUMBER_INTERVALS"]))
 
 #CHROMOSOME = ["chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10", "chr11", "chr12", "chr13", "chr14", "chr15", "chr16", "chr17", "chr18", "chr19", "chr20", "chr21", "chr22", "chrX", "chrY"]
 
@@ -207,15 +211,15 @@ rule POSTPROCESS:
 rule DATABASE:
 	input: expand(OUTPUT_DIR+"/VCF/{sample}.segments.vcf.gz", sample=SAMPLES_NAME,)
 	params: DATABASE_PATH
-	output: temp(OUTPUT_DIR+"/database.tab")
+	output: temp(OUTPUT_DIR+"/database.bed")
 	script: "Scripts/gatk4_cnv_database_file_snakemake.py"
 		
 rule BED_SORT:
-	input: OUTPUT_DIR+"/database.tab"
+	input: OUTPUT_DIR+"/database.bed"
 	output: DATABASE_PATH
 	shell: """
-	echo -e "#CHR\tSTART\tSTOP\tCNV\tNUMBER\tSAMPLES" > {output}
-	sort -V -k1,1 -k 2,2 {input} >> {output}
+	head -n 1 {input} > {output}
+	tail -n +2 {input} | sort -V -k1,1 -k 2,2 >> {output}
 	"""
 
 rule FILTER_VCF:

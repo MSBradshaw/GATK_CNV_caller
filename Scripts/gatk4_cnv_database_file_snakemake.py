@@ -32,8 +32,9 @@ else:
     database.close()
 
 ## Iterate over vcf files
-
+numb_vcf=0
 for file in files_vcf:
+    numb_vcf+=1
     print("Analysis of file ",file)
     
     if file.endswith('vcf.gz'):
@@ -81,7 +82,7 @@ for file in files_vcf:
 print("Write new database file")
 
 database=open(new_database,'w')
-#database.write("#CHR\tSTART\tEND\tCNV\tNUMBER\tNAMES\n")
+database.write("#CHR\tSTART\tEND\tCNV\tNUMBER\t"+str(numb_vcf)+"_SAMPLES\n")
 for i in dic.keys():
     field=i.split('-')
     chr=field[0]

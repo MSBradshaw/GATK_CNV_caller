@@ -26,6 +26,12 @@ GERMLINE_MODEL_PATH: /sandbox/users/bcogne/externalshares/Bioinfo/MODEL/cohort_g
 PLOIDY_MODEL_PATH: /sandbox/users/bcogne/externalshares/Bioinfo/MODEL/ploidy-model
 DATABASE_PATH: /sandbox/users/bcogne/externalshares/Bioinfo/MODEL/database_sorted.tab
 
+# Maximum frequency in your local database: exemple 0.01 for 1%
+MAX_FREQ: 0.005
+
+# Number of intervals to divide the exome: maximum 9 
+NUMBER_INTERVALS: 8
+
 # NUMBER OF CPU FOR GERMLINE CNV CALLER
 GERMLINE_CNV_CALLER_CPU: 5
 

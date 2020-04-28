@@ -11,6 +11,7 @@ VCF_file=snakemake.input[0]
 OMIM=snakemake.input[1]
 refseq=snakemake.input[2]
 gnomAD_file=snakemake.input[3]
+Max_freq=snakemake.input[4]
 OUT_file=snakemake.output[0]
 
 IN=gzip.open(VCF_file,'rt')
@@ -72,7 +73,8 @@ for line in IN:
                 internal_db=i.split("=")[1]
         cnv_size=cnv_end-cnv_start
         cnv_key=chr_cnv+":"+str(cnv_start)+"-"+str(cnv_end)
-        ## Keep only cnvs found in less than 3 individuals
+        
+        ## Keep only cnvs found in less than the defined frequency
         #if int(internal_db) > 3:
         #    continue
         
