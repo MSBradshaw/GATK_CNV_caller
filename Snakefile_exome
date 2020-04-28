@@ -140,11 +140,11 @@ rule PLOIDY:
 
 rule SCATTER:
         input: OUTPUT_DIR+"/INTERVALS/whole_exome_cohort_gccontent.filtered.interval_list"
-        params: dir = directory(OUTPUT_DIR+"/INTERVALS/scatter")
+        params: dir = directory(OUTPUT_DIR+"/INTERVALS/scatter"), scatter_count = config["NUMBER_INTERVALS"]
         output: expand(OUTPUT_DIR+"/INTERVALS/scatter/{scatter}/scattered.interval_list", scatter=SCATTER,)
         conda: "envs/gatkcondaenv.yml"
         shell: """
-        gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}"  IntervalListTools --SUBDIVISION_MODE BALANCING_WITHOUT_INTERVAL_SUBDIVISION --SCATTER_COUNT 4 --INPUT {input} --OUTPUT {params.dir}
+        gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}"  IntervalListTools --SUBDIVISION_MODE BALANCING_WITHOUT_INTERVAL_SUBDIVISION --SCATTER_COUNT {params.scatter_count} --INPUT {input} --OUTPUT {params.dir}
         """
 
 def germline_conf(wildcards):
