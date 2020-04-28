@@ -15,11 +15,15 @@ print("Create a dictionary from the database")
 dic={}
 names_dic={}
 if not os.path.exists(database_file):
+    numb_vcf=0
     print("No database file detected")
 else:
     database=open(database_file,'r')
     for line in database:
-        if line[0] != "#":
+        if line[0] == "#":
+            field=line.split('\t')
+            numb_vcf=int(field[5].rstrip().split('_'))
+        else:
             field=line.split('\t')
             chr_d=field[0]
             start_d=field[1]
@@ -32,9 +36,9 @@ else:
     database.close()
 
 ## Iterate over vcf files
-numb_vcf=0
+
 for file in files_vcf:
-    numb_vcf+=1
+    sample_match=False
     print("Analysis of file ",file)
     
     if file.endswith('vcf.gz'):
@@ -72,10 +76,13 @@ for file in files_vcf:
                     dic[key]+=1
                     names_dic[key].append(name)
                 else:
+                    sample_match=True
                     continue
             else:
                 dic[key]=1
                 names_dic[key]=[name]
+    if not sample_match:
+        numb_vcf+=1
     l.close()
 
 #Write new database
