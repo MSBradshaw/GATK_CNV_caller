@@ -6,13 +6,13 @@ import re
 import urllib
 import gzip
 
-### Get paths of files from snakemake###
+### Get paths of files and parameters from snakemake###
 VCF_file=snakemake.input[0]
-OMIM=snakemake.input[1]
-refseq=snakemake.input[2]
-gnomAD_file=snakemake.input[3]
-Max_freq=snakemake.input[4]
-database=snakemake.input[5]
+OMIM=snakemake.params[0]
+refseq=snakemake.params[1]
+gnomAD_file=snakemake.params[2]
+Max_freq=snakemake.params[3]
+database=snakemake.params[4]
 OUT_file=snakemake.output[0]
 
 IN=gzip.open(VCF_file,'rt')
