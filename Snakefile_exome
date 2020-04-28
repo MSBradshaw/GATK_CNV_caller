@@ -59,6 +59,9 @@ SCATTER=[]
 for i in intervals:
     SCATTER.append("temp_000"+str(i+1)+"_of_"+str(config["NUMBER_INTERVALS"]))
 
+# Get parameters of cnv filtering
+MAX_FREQ = config["MAX_FREQ"]
+
 #CHROMOSOME = ["chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10", "chr11", "chr12", "chr13", "chr14", "chr15", "chr16", "chr17", "chr18", "chr19", "chr20", "chr21", "chr22", "chrX", "chrY"]
 
 
@@ -228,7 +231,7 @@ rule FILTER_VCF:
 	script: "Scripts/VCF_CNV_GATK4_denovo_annotate_filter.py" 
 
 rule ANNOT_VCF:
-	input: OUTPUT_DIR+"/VCF/{sample}.segments_filtered.vcf.gz", omim = OMIM, refseq = REFSEQ, gnomad = GNOMAD
+	input: OUTPUT_DIR+"/VCF/{sample}.segments_filtered.vcf.gz", omim = OMIM, refseq = REFSEQ, gnomad = GNOMAD, max_freq = MAX_FREQ, DATABASE_PATH
 	output: OUTPUT_DIR+"/ANNO/{sample}.segments_filtered_anno.tab"
 	script: "Scripts/Script_annotation_GATK4_exome_CNV_1.0_standalone.py"
 
