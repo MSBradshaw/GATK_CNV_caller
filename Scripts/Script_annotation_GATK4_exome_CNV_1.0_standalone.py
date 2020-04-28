@@ -17,7 +17,7 @@ IN=gzip.open(VCF_file,'rt')
 OUT=open(OUT_file,'w')
 
 ### Dictionary from OMIM file [gene:disease] ###
-OMIM=open(OMIM,'r')
+OMIM=gzip.open(OMIM,'rt')
 OMIM_lib={}
 for line in OMIM:
     field=line.split('\t')
@@ -28,7 +28,7 @@ for line in OMIM:
 OMIM.close()
 
 ### Dictionary from gnomAD constraint file ###
-gnomAD=open(gnomAD_file,'r')
+gnomAD=gzip.open(gnomAD_file,'rt')
 gnomAD_lib={}
 a=0
 for line in gnomAD:
@@ -106,7 +106,7 @@ for line in IN:
         gnomAD_pLI=[]
         gnomAD_match=False
         exon=[]
-        refseq_file=open(refseq,'r')
+        refseq_file=gzip.open(refseq,'rt')
         for line in refseq_file:
             field_refseq=line.split('\t')
             chr_refseq=str(field_refseq[2])
