@@ -12,10 +12,21 @@ OMIM=snakemake.input[1]
 refseq=snakemake.input[2]
 gnomAD_file=snakemake.input[3]
 Max_freq=snakemake.input[4]
+database=snakemake.input[5]
 OUT_file=snakemake.output[0]
 
 IN=gzip.open(VCF_file,'rt')
 OUT=open(OUT_file,'w')
+
+# Get Number of samples
+DATABASE=open(database,'r')
+for line in DATABASE:
+    if line[0]=="#":
+        field=line.split('\t')
+        number_of_samples=int(field[5].rstrip().split('_')[0])
+    else:
+        break
+DATABASE.close()
 
 ### Dictionary from OMIM file [gene:disease] ###
 OMIM=gzip.open(OMIM,'rt')
@@ -74,9 +85,9 @@ for line in IN:
         cnv_size=cnv_end-cnv_start
         cnv_key=chr_cnv+":"+str(cnv_start)+"-"+str(cnv_end)
         
-        ## Keep only cnvs found in less than the defined frequency
-        #if int(internal_db) > 3:
-        #    continue
+        ## Keep only cnvs found in less than the defined max frequency
+        if float(internal_db)/float(number_of_samples) > float(Max_freq):
+            continue
         
         format=field[8].split(":")
         for i in format:
