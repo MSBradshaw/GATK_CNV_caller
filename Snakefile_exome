@@ -126,7 +126,7 @@ def PLOIDY_PARAM(wildcards):
         return { "in" : "-L "+OUTPUT_DIR+"/INTERVALS/whole_exome_cohort_gccontent.filtered.interval_list --contig-ploidy-priors conf/contig_ploidy_priors.tsv", "prefix" : "ploidy" }
 
 rule PLOIDY:
-    input: tsv = expand(OUTPUT_DIR+"/COUNTS/count.{sample}.tsv", sample=SAMPLES_NAME,), int = OUTPUT_DIR+"/INTERVALS/whole_exome_cohort_gccontent.filtered.interval_list
+    input: tsv = expand(OUTPUT_DIR+"/COUNTS/count.{sample}.tsv", sample=SAMPLES_NAME,), int = OUTPUT_DIR+"/INTERVALS/whole_exome_cohort_gccontent.filtered.interval_list"
     output: directory(OUTPUT_DIR+"/ploidy-calls_chr")
     params: p=PLOIDY_PARAM
     conda: "envs/gatkcondaenv.yml"
