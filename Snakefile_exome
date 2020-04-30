@@ -199,6 +199,11 @@ rule POSTPROCESS:
         shell: """
         export MKL_NUM_THREADS=1
         export OMP_NUM_THREADS=1
+        
+        mkdir {config[TEMP_DIR]}"/COMPILEDIR_{wildcards.sample}"
+        echo -e "[global]\nbase_compiledir = "{config[TEMP_DIR]}"/COMPILEDIR_{wildcards.sample}" > {config[TEMP_DIR]}"/THEANORC_{wildcards.sample}"
+        export THEANORC={config[TEMP_DIR]}"/THEANORC_"{wildcards.sample}
+        
         gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" PostprocessGermlineCNVCalls \
         --model-shard-path {params.modelfiles} \
         --calls-shard-path {params.callsfiles} \
@@ -209,6 +214,8 @@ rule POSTPROCESS:
         --output-genotyped-segments {output.seg} \
         --output-denoised-copy-ratios {output.den} \
         --sequence-dictionary {params.dict}
+        
+        rm -r {config[TEMP_DIR]}"/COMPILEDIR_{wildcards.sample}"
         """
 	
 rule DATABASE:
