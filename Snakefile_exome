@@ -14,12 +14,30 @@ OUTPUT_DIR = config['OUTPUT_DIR']
 REFERENCEGENOME = config["HG_PATH"]
 HGDICT = config["DICT_PATH"]
 BED = config["BED_PATH"]
-OMIM = config['SV-EXOME_DIR']+"/ref/OMIM_gene_patho.txt"
-REFSEQ = config['SV-EXOME_DIR']+"/ref/hg19_refGene.txt"
+OMIM = config['SV-EXOME_DIR']+"/ref/OMIM_gene_patho.txt.gz"
+REFSEQ = config['SV-EXOME_DIR']+"/ref/hg19_refGene.txt.gz"
+GNOMAD = config['SV-EXOME_DIR']+"/ref/gnomAD_gene_pLI.txt.gz"
 
+# Get run mode parameters
+MODE = config["MODE"]
+if MODE == "CASE":
+    MODEL_DIR = config["GERMLINE_MODEL_PATH"]
+    PLOIDY_DIR = config["PLOIDY_MODEL_PATH"]
+    DATABASE_PATH = config["DATABASE_PATH"]
+elif MODE == "COHORT":
+    MODEL_DIR = OUTPUT_DIR+"/cohort_germline_calling"
+    PLOIDY_DIR = OUTPUT_DIR+"/ploidy-calls_chr"
+    DATABASE_PATH = OUTPUT_DIR+"/database_sorted.bed"
+else:
+    exit("MODE OF CALLING SHOULD BE: CASE or COHORT")
+
+# Get sample name information
 SAMPLES_DIR = config["SAMPLES_PATH"]
 
 SAMPLES_GLOB = glob.glob(SAMPLES_DIR+"/*am")
+
+if config["SAMPLE_LIST"]:
+    SAMPLE_LIST = config["SAMPLE_LIST"].split(',')
 
 SAMPLES_NAME = []
 # Check if samples have a valid extension and make a list of the names of the sample names
@@ -28,9 +46,21 @@ for i in SAMPLES_GLOB:
         print(i+" has not a valid extension. It should be a .bam or .cram file") 
         exit()
     else:
-        SAMPLES_NAME.append(i.split("/")[-1].replace(".cram","").replace(".bam","").split(config["SAMPLE_SEPARATOR"])[int(config["SAMPLE_INDEX"])])
+        name_samp = i.split("/")[-1].replace(".cram","").replace(".bam","").split(config["SAMPLE_SEPARATOR"])[int(config["SAMPLE_INDEX"])]
+        if config["SAMPLE_LIST"]:
+            if name_samp in SAMPLE_LIST:
+                SAMPLES_NAME.append(name_samp)
+        else:
+            SAMPLES_NAME.append(name_samp)
 
-SCATTER = ["temp_0001_of_4","temp_0002_of_4","temp_0003_of_4","temp_0004_of_4"]
+intervals=range(config["NUMBER_INTERVALS"])
+#SCATTER = ["temp_0001_of_4","temp_0002_of_4","temp_0003_of_4","temp_0004_of_4"]
+SCATTER=[]
+for i in intervals:
+    SCATTER.append("temp_000"+str(i+1)+"_of_"+str(config["NUMBER_INTERVALS"]))
+
+# Get parameters of cnv filtering
+MAX_FREQ = str(config["MAX_FREQ"])
 
 #CHROMOSOME = ["chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10", "chr11", "chr12", "chr13", "chr14", "chr15", "chr16", "chr17", "chr18", "chr19", "chr20", "chr21", "chr22", "chrX", "chrY"]
 
@@ -39,7 +69,7 @@ SCATTER = ["temp_0001_of_4","temp_0002_of_4","temp_0003_of_4","temp_0004_of_4"]
 ### RULES ### 
 
 rule target:
-    input: expand(OUTPUT_DIR+"/COUNTS/count.{sample}.tsv", sample=SAMPLES_NAME,), expand(OUTPUT_DIR+"/INTERVALS/scatter/{scatter}/scattered.interval_list", scatter = SCATTER,), OUTPUT_DIR+"/ploidy-calls_chr",  expand(OUTPUT_DIR+"/cohort_germline_calling/fragment_{fragment}-model", fragment = SCATTER,), expand(OUTPUT_DIR+"/cohort_germline_calling/fragment_{fragment}-calls", fragment = SCATTER,), expand(OUTPUT_DIR+"/VCF/{sample}.segments.vcf.gz", sample=SAMPLES_NAME,), OUTPUT_DIR+"/database_sorted.tab", expand(OUTPUT_DIR+"/VCF/{sample}.segments_filtered.vcf.gz", sample=SAMPLES_NAME,), OUTPUT_DIR+"/all_cnv_calls_anno.tab"
+    input: expand(OUTPUT_DIR+"/COUNTS/count.{sample}.tsv", sample=SAMPLES_NAME,), expand(OUTPUT_DIR+"/INTERVALS/scatter/{scatter}/scattered.interval_list", scatter = SCATTER,), OUTPUT_DIR+"/ploidy-calls_chr",  expand(OUTPUT_DIR+"/cohort_germline_calling/{fragment}-calls", fragment = SCATTER,), expand(OUTPUT_DIR+"/VCF/{sample}.segments.vcf.gz", sample=SAMPLES_NAME,), expand(OUTPUT_DIR+"/VCF/{sample}.segments_filtered.vcf.gz", sample=SAMPLES_NAME,), OUTPUT_DIR+"/all_cnv_calls_anno.tab"
 
 rule MAKE_INTERVALS:
     input: ref = REFERENCEGENOME, bed = BED 
@@ -89,69 +119,91 @@ rule FILTER_INTERVALS:
 	gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" FilterIntervals -L {input.interval} --annotated-intervals {input.annotated} $a -imr OVERLAPPING_ONLY -O {output} 
 	"""
 
+def PLOIDY_PARAM(wildcards):
+    if MODE == "CASE":
+        return { "in" : "--model "+PLOIDY_DIR, "prefix" : "ploidy" }
+    elif MODE == "COHORT":
+        return { "in" : "-L "+OUTPUT_DIR+"/INTERVALS/whole_exome_cohort_gccontent.filtered.interval_list --contig-ploidy-priors conf/contig_ploidy_priors.tsv", "prefix" : "ploidy" }
+
 rule PLOIDY:
-    input: cohort = OUTPUT_DIR+"/INTERVALS/whole_exome_cohort_gccontent.filtered.interval_list", priors = "conf/contig_ploidy_priors.tsv", tsv = expand(OUTPUT_DIR+"/COUNTS/count.{sample}.tsv", sample=SAMPLES_NAME,)
+    input: tsv = expand(OUTPUT_DIR+"/COUNTS/count.{sample}.tsv", sample=SAMPLES_NAME,), int = OUTPUT_DIR+"/INTERVALS/whole_exome_cohort_gccontent.filtered.interval_list"
     output: directory(OUTPUT_DIR+"/ploidy-calls_chr")
-    params: prefix = "ploidy"
+    params: p=PLOIDY_PARAM
     conda: "envs/gatkcondaenv.yml"
     shell: """
 	export MKL_NUM_THREADS={config[GATK][MAX_THREADS]}
 	export OMP_NUM_THREADS={config[GATK][MAX_THREADS]}
 	a=""
 	for i in {input.tsv}; do a=$a" -I "$i; done
-	gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" DetermineGermlineContigPloidy -L {input.cohort} $a --imr OVERLAPPING_ONLY --contig-ploidy-priors {input.priors} --output {output} --output-prefix {params}
+	gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" DetermineGermlineContigPloidy {params.p[in]} $a --imr OVERLAPPING_ONLY --output {output} --output-prefix {params.p[prefix]}
 	"""
 
 rule SCATTER:
         input: OUTPUT_DIR+"/INTERVALS/whole_exome_cohort_gccontent.filtered.interval_list"
-        params: dir = directory(OUTPUT_DIR+"/INTERVALS/scatter")
+        params: dir = directory(OUTPUT_DIR+"/INTERVALS/scatter"), scatter_count = config["NUMBER_INTERVALS"]
         output: expand(OUTPUT_DIR+"/INTERVALS/scatter/{scatter}/scattered.interval_list", scatter=SCATTER,)
         conda: "envs/gatkcondaenv.yml"
         shell: """
-        gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}"  IntervalListTools --SUBDIVISION_MODE BALANCING_WITHOUT_INTERVAL_SUBDIVISION --SCATTER_COUNT 4 --INPUT {input} --OUTPUT {params.dir}
+        gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}"  IntervalListTools --SUBDIVISION_MODE BALANCING_WITHOUT_INTERVAL_SUBDIVISION --SCATTER_COUNT {params.scatter_count} --INPUT {input} --OUTPUT {params.dir}
         """
 
+def germline_conf(wildcards):
+    if MODE == "CASE":
+        dic = { 'mode' : MODE+' --model '+MODEL_DIR+'/'+list({wildcards.fragment})[0]+'-model' }
+    elif MODE == "COHORT":
+        dic = { 'mode' : MODE+' --annotated-intervals '+OUTPUT_DIR+'/INTERVALS/whole_exome_annotated_intervals.tsv --interval-merging-rule OVERLAPPING_ONLY -L '+OUTPUT_DIR+'/INTERVALS/scatter/'+list({wildcards.fragment})[0]+'/scattered.interval_list' }
+    return dic
+
 rule GERMLINE_CNV_CALLER:
-    input: interval = OUTPUT_DIR+"/INTERVALS/scatter/{fragment}/scattered.interval_list", tsv = expand(OUTPUT_DIR+"/COUNTS/count.{sample}.tsv", sample=SAMPLES_NAME,), priors = "conf/contig_ploidy_priors.tsv", anno = OUTPUT_DIR+"/INTERVALS/whole_exome_annotated_intervals.tsv", ploidy=OUTPUT_DIR+"/ploidy-calls_chr"
-    params: prefix="fragment_{fragment}", outdir=OUTPUT_DIR+"/cohort_germline_calling"
+    input: interval = OUTPUT_DIR+"/INTERVALS/scatter/{fragment}/scattered.interval_list", tsv = expand(OUTPUT_DIR+"/COUNTS/count.{sample}.tsv", sample=SAMPLES_NAME,), anno = OUTPUT_DIR+"/INTERVALS/whole_exome_annotated_intervals.tsv", ploidy=OUTPUT_DIR+"/ploidy-calls_chr"
+    params: prefix="{fragment}",  p=germline_conf, dir=OUTPUT_DIR+"/cohort_germline_calling"
     resources: cnv_caller=1
-    output: model=directory(OUTPUT_DIR+"/cohort_germline_calling/fragment_{fragment}-model"), call=directory(OUTPUT_DIR+"/cohort_germline_calling/fragment_{fragment}-calls")
+    output: call = directory(OUTPUT_DIR+"/cohort_germline_calling/{fragment}-calls")
     conda: "envs/gatkcondaenv.yml"
     shell: """
         export MKL_NUM_THREADS={config[GERMLINE_CNV_CALLER_CPU]}
         export OMP_NUM_THREADS={config[GERMLINE_CNV_CALLER_CPU]}
+
+        mkdir {config[TEMP_DIR]}"/COMPILEDIR_{wildcards.fragment}"
+        echo -e "[global]\nbase_compiledir = "{config[TEMP_DIR]}"/COMPILEDIR_{wildcards.fragment}" > {config[TEMP_DIR]}"/THEANORC_{wildcards.fragment}"
+        export THEANORC={config[TEMP_DIR]}"/THEANORC_"{wildcards.fragment}
+
         a=""
         for i in {input.tsv}; do a=$a" -I "$i; done
         gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" GermlineCNVCaller \
-        -L {input.interval} \
-        --run-mode COHORT \
+        --run-mode {params.p[mode]} \
         $a \
         --contig-ploidy-calls {input.ploidy}/ploidy-calls \
-        --annotated-intervals {input.anno} \
-        --interval-merging-rule OVERLAPPING_ONLY \
-        --output {params.outdir} \
+        --output {params.dir} \
         --output-prefix {params.prefix} \
         --verbosity DEBUG
+
+        rm -r {config[TEMP_DIR]}"/COMPILEDIR_{wildcards.fragment}"
         """
 
 
-def index(sample):
-    for i in glob.glob(OUTPUT_DIR+"/cohort_germline_calling/fragment_temp_0001_of_4-calls/SAMPLE_*/sample_name.txt"):
+def index(sample,scatter):
+    for i in glob.glob(OUTPUT_DIR+"/cohort_germline_calling/"+scatter[0]+"-calls/SAMPLE_*/sample_name.txt"):
         file=open(i,'r')
         for line in file:
            if line.rstrip() == sample: 
                return i.split('/')[-2].split('_')[1]
 
 rule POSTPROCESS:
-        input: sam = OUTPUT_DIR+"/COUNTS/count.{sample}.tsv", model=expand(OUTPUT_DIR+"/cohort_germline_calling/fragment_{scatter}-model", scatter = SCATTER,), calls=expand(OUTPUT_DIR+"/cohort_germline_calling/fragment_{scatter}-calls", scatter = SCATTER,)
+        input: sam = OUTPUT_DIR+"/COUNTS/count.{sample}.tsv", calls=expand(OUTPUT_DIR+"/cohort_germline_calling/{scatter}-calls", scatter = SCATTER,)
         output: int = OUTPUT_DIR+"/VCF/{sample}.intervals.vcf.gz", seg = OUTPUT_DIR+"/VCF/{sample}.segments.vcf.gz", den = OUTPUT_DIR+"/VCF/{sample}.denoise"
-        params: id = lambda wildcards: index(wildcards.sample), ploidy_path = OUTPUT_DIR+"/ploidy-calls_chr/ploidy-calls/", dict = HGDICT,
-                modelfiles = lambda wildcards, input: " --model-shard-path ".join(input.model),
+        params: id = lambda wildcards: index(wildcards.sample, SCATTER), ploidy_path = OUTPUT_DIR+"/ploidy-calls_chr/ploidy-calls/", dict = HGDICT,
+                modelfiles = lambda wildcards, input: " --model-shard-path ".join([x.replace('-calls','-model') for x in input.calls]),
                 callsfiles = lambda wildcards, input: " --calls-shard-path ".join(input.calls),
         conda: "envs/gatkcondaenv.yml"
         shell: """
         export MKL_NUM_THREADS=1
         export OMP_NUM_THREADS=1
+        
+        mkdir {config[TEMP_DIR]}"/COMPILEDIR_{wildcards.sample}"
+        echo -e "[global]\nbase_compiledir = "{config[TEMP_DIR]}"/COMPILEDIR_{wildcards.sample}" > {config[TEMP_DIR]}"/THEANORC_{wildcards.sample}"
+        export THEANORC={config[TEMP_DIR]}"/THEANORC_"{wildcards.sample}
+        
         gatk --java-options "-Xmx{config[JAVA_ARGS][MAX_MEMORY]} -Djava.io.tmpdir={config[TEMP_DIR]}" PostprocessGermlineCNVCalls \
         --model-shard-path {params.modelfiles} \
         --calls-shard-path {params.callsfiles} \
@@ -162,19 +214,22 @@ rule POSTPROCESS:
         --output-genotyped-segments {output.seg} \
         --output-denoised-copy-ratios {output.den} \
         --sequence-dictionary {params.dict}
+        
+        rm -r {config[TEMP_DIR]}"/COMPILEDIR_{wildcards.sample}"
         """
 	
 rule DATABASE:
 	input: expand(OUTPUT_DIR+"/VCF/{sample}.segments.vcf.gz", sample=SAMPLES_NAME,)
-	output: temp(OUTPUT_DIR+"/database.tab")
+	params: DATABASE_PATH
+	output: temp(OUTPUT_DIR+"/database.bed")
 	script: "Scripts/gatk4_cnv_database_file_snakemake.py"
 		
 rule BED_SORT:
-	input: OUTPUT_DIR+"/database.tab"
-	output: OUTPUT_DIR+"/database_sorted.tab"
+	input: OUTPUT_DIR+"/database.bed"
+	output: DATABASE_PATH
 	shell: """
-	echo -e "#CHR\tSTART\tSTOP\tCNV\tNUMBER\tSAMPLES" > {output}
-	sort -V -k1,1 -k 2,2 {input} >> {output}
+	head -n 1 {input} > {output}
+	tail -n +2 {input} | sort -V -k1,1 -k 2,2 >> {output}
 	"""
 
 rule FILTER_VCF:
@@ -183,7 +238,8 @@ rule FILTER_VCF:
 	script: "Scripts/VCF_CNV_GATK4_denovo_annotate_filter.py" 
 
 rule ANNOT_VCF:
-	input: OUTPUT_DIR+"/VCF/{sample}.segments_filtered.vcf.gz", omim = OMIM, refseq = REFSEQ
+	input: OUTPUT_DIR+"/VCF/{sample}.segments_filtered.vcf.gz"
+	params: omim = OMIM, refseq = REFSEQ, gnomad = GNOMAD, max_freq = MAX_FREQ, db = DATABASE_PATH
 	output: OUTPUT_DIR+"/ANNO/{sample}.segments_filtered_anno.tab"
 	script: "Scripts/Script_annotation_GATK4_exome_CNV_1.0_standalone.py"
 

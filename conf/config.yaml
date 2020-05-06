@@ -13,12 +13,28 @@ SAMPLES_PATH: /sandbox/users/bcogne/externalshares/Bioinfo/CRAM
 
 # Parameters to retrieve sample name from bam or cram files
 # For exemple if your bam or cram files are named: realigned_recal_NAME.bam, write as separator _ with index 2
-
+# You can define samples you want to perform the analysis by giving a list of your sample's names to SAMPLE_LIST: Sample1,Sample2,...
 SAMPLE_SEPARATOR: _
 SAMPLE_INDEX: 2
+SAMPLE_LIST: 
+
+# Parameters to run germline cnv calling: either COHORT or CASE mode
+# If you use CASE mode, put the math to the model directory and the database file
+
+MODE: COHORT
+GERMLINE_MODEL_PATH: /sandbox/users/bcogne/externalshares/Bioinfo/MODEL/cohort_germline_calling
+PLOIDY_MODEL_PATH: /sandbox/users/bcogne/externalshares/Bioinfo/MODEL/ploidy-model
+DATABASE_PATH: /sandbox/users/bcogne/externalshares/Bioinfo/MODEL/database_sorted.tab
+
+# Maximum frequency in your local database: exemple 0.01 for 1%
+MAX_FREQ: 0.005
+
+# Number of intervals to divide the exome: maximum 9 
+NUMBER_INTERVALS: 8
 
 # NUMBER OF CPU FOR GERMLINE CNV CALLER
 GERMLINE_CNV_CALLER_CPU: 5
+
 # JAVA ARGUMENTS FOR GATK
 JAVA_ARGS:
     MAX_MEMORY: 8G                      # Maximum memory allocation pool for a Java virtual machine.

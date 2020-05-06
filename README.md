@@ -2,7 +2,10 @@
 
 This is a pipeline to analyze CNVs from a cohort of bam or cram files with GATK4.
 
-It runs the COHORT mode. It means that you need a batch of exomes, at least 30 sequenced in the same conditions sounds reasonable for beginning, but you can try with less.
+It runs either the COHORT or CASE mode. 
+For COHORT mode, you need a batch of exomes, at least 30 sequenced in the same conditions sounds reasonable for beginning, but you can try with less.
+For CASE mode, you need to have previously run a COHORT mode in similar samples. GATK will use the model you provide in the config file.
+
 
 The pipeline contains several steps:
 1) Count of the number of reads per intervals
@@ -25,12 +28,7 @@ Have an activated conda environment with a recent version of snakemake
     cd sv-exome
     ~~~
 
-2) Unzip the hg19 refseq file
-    ~~~
-    gunzip ref/hg19_refGene.txt.gz
-    ~~~
-
-3) Edit the environment file "envs/gatkcondaenv.yml": Add the absolute path of the last line: /path/to/sv-exome/envs/gatkPythonPackageArchive.zip
+2) Edit the environment file "envs/gatkcondaenv.yml": Add the absolute path of the last line: /path/to/sv-exome/envs/gatkPythonPackageArchive.zip
 
 ## Launch of the pipeline
 
@@ -42,3 +40,26 @@ Have an activated conda environment with a recent version of snakemake
     ~~~
     The parameter "--resources cnv_caller=1" is not required but allows to specifically attributes the number of germline cnv calling jobs run in parallel as it is really consuming a lot of RAM, which increase proportionally to the number of samples processed. Exemple: for 150 exomes, if you have more than 100Go RAM and at least 20 CPUs available (default value of 5 CPUs per job in the config file), you can consider using the maximum: cnv_caller=4 (default value if you choose -j options of at least 4CPUs)
 
+## DEBUG
+
+If during conda environment installation you have the following message:
+
+~~~
+ResolvePackageNotFound:
+  - certifi==2016.2.28=py36_0
+  - xz==5.2.3=0
+  - readline==6.2=2
+  - openssl==1.0.2l=0
+  - tk==8.5.18=0
+  - pip==9.0.1=py36_1
+  - python==3.6.2=0
+  - zlib==1.2.11=0
+  - sqlite==3.13.0=0
+  - setuptools==36.4.0=py36_1
+  - wheel==0.29.0=py36_0
+~~~
+
+Just do before running snakemake: 
+~~~
+conda config --set restore_free_channel true
+~~~
