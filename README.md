@@ -2,7 +2,10 @@
 
 This is a pipeline to analyze CNVs from a cohort of bam or cram files with GATK4.
 
-It runs the COHORT mode. It means that you need a batch of exomes, at least 30 sequenced in the same conditions sounds reasonable for beginning, but you can try with less.
+It runs either the COHORT or CASE mode. 
+For COHORT mode, you need a batch of exomes, at least 30 sequenced in the same conditions sounds reasonable for beginning, but you can try with less.
+For CASE mode, you need to have previously run a COHORT mode in similar samples. GATK will use the model you provide in the config file.
+
 
 The pipeline contains several steps:
 1) Count of the number of reads per intervals
@@ -25,12 +28,7 @@ Have an activated conda environment with a recent version of snakemake
     cd sv-exome
     ~~~
 
-2) Unzip the data reference files 
-    ~~~
-    gunzip ref/*.gz
-    ~~~
-
-3) Edit the environment file "envs/gatkcondaenv.yml": Add the absolute path of the last line: /path/to/sv-exome/envs/gatkPythonPackageArchive.zip
+2) Edit the environment file "envs/gatkcondaenv.yml": Add the absolute path of the last line: /path/to/sv-exome/envs/gatkPythonPackageArchive.zip
 
 ## Launch of the pipeline
 
