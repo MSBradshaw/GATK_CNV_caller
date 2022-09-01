@@ -1,5 +1,7 @@
 # SV-exome
 
+This repo is based on https://gitlab.univ-nantes.fr/benjamin.co/sv-exome/-/tree/master but has been modified to meet my needs.
+
 This is a pipeline to analyze CNVs from a cohort of bam or cram files with GATK4.
 
 It runs either the COHORT or CASE mode. 
